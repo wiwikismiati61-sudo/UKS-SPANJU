@@ -1,0 +1,5 @@
+{
+  "name": "Sistem UKS SMPN 7",
+  "description": "A comprehensive School Health Unit (UKS) management system for SMPN 7, featuring student data management, medicine inventory tracking, health examination records, and student health screening with data export capabilities.",
+  "requestFramePermissions": []
+}
