@@ -149,7 +149,7 @@ const Dashboard: React.FC<{ db: AppDatabase, setActivePage: (p: PageId) => void 
         </button>
       </header>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
         <StatCard title="Total Kunjungan" value={db.transaksi.length} icon={<Users size={20}/>} color="bg-blue-500" trend="+12%" />
         <StatCard title="Siswa Berobat" value={db.transaksi.filter(t => t.penanganan === 'Minum Obat').length} icon={<Pill size={20}/>} color="bg-emerald-500" />
         <StatCard title="Screening" value={db.screening.length} icon={<ClipboardCheck size={20}/>} color="bg-purple-500" />
@@ -204,7 +204,7 @@ const MasterSiswa: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) 
         <h2 className="text-3xl font-black text-slate-800 tracking-tight">Data Peserta Didik</h2>
         <button onClick={addSiswa} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-md transition hover:bg-blue-700"><Plus size={18}/> Tambah</button>
       </div>
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b"><tr><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">ID</th><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Nama</th><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Kelas</th><th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase">Aksi</th></tr></thead>
@@ -229,7 +229,7 @@ const MasterObat: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) =
         <h2 className="text-3xl font-black text-slate-800 tracking-tight">Persediaan Obat</h2>
         <button onClick={addObat} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-md transition hover:bg-blue-700"><Plus size={18}/> Tambah</button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
         {filteredObat.map(o => (
           <div key={o.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 group transition hover:shadow-md">
             <div className="flex justify-between items-start">
@@ -284,7 +284,7 @@ const FormTransaksi: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase
     <div className="space-y-6 animate-in fade-in duration-500">
       <h2 className="text-3xl font-black text-slate-800 tracking-tight">Pemeriksaan UKS</h2>
       <div className="bg-white p-8 sm:p-10 rounded-[40px] shadow-xl border border-blue-50">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
           <div className="space-y-6">
             <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Users size={16}/> Identitas</h4>
             <div className="space-y-4">
@@ -336,7 +336,7 @@ const Laporan: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) => v
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <h2 className="text-3xl font-black text-slate-800 tracking-tight">Laporan & Arsip</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 group transition hover:border-blue-200">
           <h4 className="font-black text-slate-800 mb-1">Kunjungan UKS</h4>
           <button onClick={() => {
@@ -413,7 +413,7 @@ const ScreeningPage: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase
     <div className="space-y-6 animate-in fade-in duration-500">
       <h2 className="text-3xl font-black text-slate-800 tracking-tight">Screening Kesehatan</h2>
       <div className="bg-white p-8 rounded-3xl shadow-sm border border-purple-50">
-        <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-4">
             <h4 className="text-xs font-black text-purple-600 uppercase">Informasi</h4>
             <input type="date" className="w-full p-3 bg-slate-50 rounded-xl" value={scForm.tanggal} onChange={e => setScForm({...scForm, tanggal: e.target.value})} />
@@ -486,7 +486,7 @@ const Pengaturan: React.FC<{ db: AppDatabase, setDb: (db: AppDatabase) => void, 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <h2 className="text-3xl font-black text-slate-800 tracking-tight">Pengaturan</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
           <h3 className="font-black text-slate-800 mb-6 flex items-center gap-2"><Settings size={20}/> Kredensial Admin</h3>
           <div className="space-y-4">
@@ -639,10 +639,10 @@ const App: React.FC = () => {
         </div>
       )}
       
-      <aside className={`${sidebarOpen ? 'w-72' : 'w-24'} bg-slate-900 text-slate-300 transition-all duration-500 flex flex-col fixed h-full z-40 shadow-2xl print:hidden`}>
-        <div className="p-8 flex flex-col items-center border-b border-slate-800 mb-4">
+      <aside className={`bg-slate-900 text-slate-300 transition-all duration-300 flex flex-col fixed h-full z-40 shadow-2xl print:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 lg:w-72`}>
+        <div className="p-6 flex items-center gap-4 border-b border-slate-800 mb-4 lg:flex-col lg:p-8">
           <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-4"><Stethoscope size={24}/></div>
-          {sidebarOpen && <h2 className="text-xl font-black text-white tracking-tighter">UKS SMPN 7</h2>}
+          <h2 className="text-xl font-black text-white tracking-tighter lg:block">UKS SMPN 7</h2>
         </div>
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
           {[
@@ -655,20 +655,20 @@ const App: React.FC = () => {
             { id: 'pengaturan', icon: <Settings size={20}/>, label: 'Setting' },
           ].map(i => (
             <button key={i.id} onClick={() => { setActivePage(i.id as any); if (window.innerWidth < 1024) setSidebarOpen(false); }} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition ${activePage === i.id ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800'}`}>
-              {i.icon}{sidebarOpen && <span className="text-sm font-bold">{i.label}</span>}
+              {i.icon}<span className="text-sm font-bold lg:block">{i.label}</span>
             </button>
           ))}
         </nav>
-        <div className="p-6 border-t border-slate-800"><button onClick={() => setIsLoggedIn(false)} className="w-full flex items-center gap-4 p-4 rounded-2xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition"><LogOut size={20}/>{sidebarOpen && <span className="font-bold">Logout</span>}</button></div>
+        <div className="p-6 border-t border-slate-800"><button onClick={() => setIsLoggedIn(false)} className="w-full flex items-center gap-4 p-4 rounded-2xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition"><LogOut size={20}/><span className="font-bold lg:block">Logout</span></button></div>
       </aside>
 
-      <main className={`flex-1 transition-all duration-500 ${sidebarOpen ? 'ml-72' : 'ml-24'} print:m-0 print:ml-0`}>
-        <header className="h-24 bg-white border-b px-12 flex items-center justify-between sticky top-0 z-30 print:hidden">
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-3 bg-slate-50 rounded-xl"><Menu size={20}/></button>
-          <div className="flex items-center gap-4 bg-slate-50 px-6 py-3 rounded-2xl border w-96"><Search size={18} className="text-slate-400"/><input type="text" placeholder={`Cari data...`} className="bg-transparent border-none outline-none text-sm w-full font-bold" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
+      <main className={`flex-1 transition-all duration-300 lg:ml-72 print:m-0 print:ml-0`}>
+        <header className="h-24 bg-white/80 backdrop-blur-sm border-b border-slate-100 px-6 lg:px-12 flex items-center justify-between sticky top-0 z-30 print:hidden">
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-3 bg-slate-100 rounded-xl lg:hidden"><Menu size={20}/></button>
+          <div className="flex items-center gap-4 bg-slate-100 px-4 py-3 rounded-2xl border w-full max-w-xs lg:max-w-md"><Search size={18} className="text-slate-400"/><input type="text" placeholder={`Cari data...`} className="bg-transparent border-none outline-none text-sm w-full font-bold" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
           <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-black">{db.user.username.charAt(0).toUpperCase()}</div>
         </header>
-        <div className="p-12 max-w-7xl mx-auto print:p-0">
+        <div className="p-6 lg:p-12 max-w-7xl mx-auto print:p-0">
           {activePage === 'dashboard' && <Dashboard db={db} setActivePage={setActivePage} />}
           {activePage === 'master-siswa' && <MasterSiswa db={db} saveToStorage={saveToStorage} searchTerm={searchTerm} />}
           {activePage === 'master-obat' && <MasterObat db={db} saveToStorage={saveToStorage} searchTerm={searchTerm} />}
