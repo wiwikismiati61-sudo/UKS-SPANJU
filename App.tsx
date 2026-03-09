@@ -138,18 +138,18 @@ const Dashboard: React.FC<{ db: AppDatabase, setActivePage: (p: PageId) => void 
   }));
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Halo, Admin UKS 👋</h2>
-          <p className="text-slate-500 mt-1">Berikut adalah ringkasan kesehatan siswa hari ini.</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Halo, Admin UKS 👋</h2>
+          <p className="text-sm text-slate-500 mt-1">Berikut adalah ringkasan kesehatan siswa hari ini.</p>
         </div>
-        <button onClick={() => setActivePage('transaksi')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 shadow-lg shadow-blue-200 transition-all hover:scale-[1.02] active:scale-95">
-          <Plus size={20}/> Periksa Siswa
+        <button onClick={() => setActivePage('transaksi')} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200 transition-all hover:scale-[1.02] active:scale-95">
+          <Plus size={18}/> Periksa Siswa
         </button>
       </header>
       
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard title="Total Kunjungan" value={db.transaksi.length} icon={<Users size={20}/>} color="bg-blue-500" trend="+12%" />
         <StatCard title="Siswa Berobat" value={db.transaksi.filter(t => t.penanganan === 'Minum Obat').length} icon={<Pill size={20}/>} color="bg-emerald-500" />
         <StatCard title="Screening" value={db.screening.length} icon={<ClipboardCheck size={20}/>} color="bg-purple-500" />
@@ -157,10 +157,10 @@ const Dashboard: React.FC<{ db: AppDatabase, setActivePage: (p: PageId) => void 
         <StatCard title="Rujukan PKM" value={db.transaksi.filter(t => t.penanganan === 'Rujuk ke Puskesmas').length} icon={<Stethoscope size={20}/>} color="bg-rose-500" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white p-7 rounded-3xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold mb-8 flex items-center gap-2 text-slate-800"><TrendingUp size={20} className="text-blue-600"/> Tren Kunjungan Harian</h3>
-          <div className="h-72">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="text-base font-bold mb-6 flex items-center gap-2 text-slate-800"><TrendingUp size={18} className="text-blue-600"/> Tren Kunjungan Harian</h3>
+          <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs><linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient></defs>
@@ -174,16 +174,16 @@ const Dashboard: React.FC<{ db: AppDatabase, setActivePage: (p: PageId) => void 
             </ResponsiveContainer>
           </div>
         </div>
-        <div className="bg-white p-7 rounded-3xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-bold mb-6 flex items-center gap-2 text-slate-800"><AlertTriangle size={20} className="text-amber-500"/> Notifikasi Sistem</h3>
-          <div className="space-y-4">
+        <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="text-base font-bold mb-5 flex items-center gap-2 text-slate-800"><AlertTriangle size={18} className="text-amber-500"/> Notifikasi Sistem</h3>
+          <div className="space-y-3">
             {lowStock.map(o => (
-              <div key={o.id} className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
-                <div className="p-2 bg-amber-200 text-amber-700 rounded-lg h-fit"><Pill size={16}/></div>
-                <div><p className="text-xs font-black text-amber-800 uppercase">Stok Kritis</p><p className="text-sm text-amber-700 mt-1"><strong>{o.nama}</strong> sisa {o.stok} unit.</p></div>
+              <div key={o.id} className="p-3 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
+                <div className="p-2 bg-amber-200 text-amber-700 rounded-lg h-fit"><Pill size={14}/></div>
+                <div><p className="text-[10px] font-black text-amber-800 uppercase">Stok Kritis</p><p className="text-xs text-amber-700 mt-0.5"><strong>{o.nama}</strong> sisa {o.stok} unit.</p></div>
               </div>
             ))}
-            {lowStock.length === 0 && <div className="py-20 text-center text-slate-400 italic">Semua obat dalam kondisi aman.</div>}
+            {lowStock.length === 0 && <div className="py-10 text-center text-sm text-slate-400 italic">Semua obat dalam kondisi aman.</div>}
           </div>
         </div>
       </div>
@@ -199,16 +199,16 @@ const MasterSiswa: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) 
     if (v && v[0] && v[1]) saveToStorage({ ...db, siswa: [...db.siswa, { id: Date.now(), nama: v[0], kelas: v[1] }] });
   };
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-5 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-black text-slate-800 tracking-tight">Data Peserta Didik</h2>
-        <button onClick={addSiswa} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-md transition hover:bg-blue-700"><Plus size={18}/> Tambah</button>
+        <h2 className="text-2xl font-black text-slate-800 tracking-tight">Data Peserta Didik</h2>
+        <button onClick={addSiswa} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm flex items-center gap-2 font-bold shadow-md transition hover:bg-blue-700"><Plus size={16}/> Tambah</button>
       </div>
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b"><tr><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">ID</th><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Nama</th><th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase">Kelas</th><th className="px-6 py-4 text-right text-[10px] font-black text-slate-400 uppercase">Aksi</th></tr></thead>
-            <tbody className="divide-y divide-gray-50">{filteredSiswa.map((s, i) => (<tr key={s.id} className="hover:bg-slate-50"><td className="px-6 py-4 font-mono text-xs">{i+1}</td><td className="px-6 py-4 font-bold text-slate-700">{s.nama}</td><td className="px-6 py-4"><span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-black">{s.kelas}</span></td><td className="px-6 py-4 text-right"><button onClick={() => saveToStorage({...db, siswa: db.siswa.filter(x => x.id !== s.id)})} className="text-rose-400 hover:text-rose-600 p-2"><Trash2 size={18}/></button></td></tr>))}</tbody>
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 border-b"><tr><th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">ID</th><th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Nama</th><th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Kelas</th><th className="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Aksi</th></tr></thead>
+            <tbody className="divide-y divide-gray-50">{filteredSiswa.map((s, i) => (<tr key={s.id} className="hover:bg-slate-50"><td className="px-4 py-3 font-mono text-xs">{i+1}</td><td className="px-4 py-3 font-bold text-slate-700">{s.nama}</td><td className="px-4 py-3"><span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-[10px] font-black">{s.kelas}</span></td><td className="px-4 py-3 text-right"><button onClick={() => saveToStorage({...db, siswa: db.siswa.filter(x => x.id !== s.id)})} className="text-rose-400 hover:text-rose-600 p-1.5"><Trash2 size={16}/></button></td></tr>))}</tbody>
           </table>
         </div>
       </div>
@@ -224,19 +224,19 @@ const MasterObat: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) =
     if (v && v[0]) saveToStorage({ ...db, obat: [...db.obat, { id: Date.now(), nama: v[0], stok: parseInt(v[1] || '0') }] });
   };
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-5 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-black text-slate-800 tracking-tight">Persediaan Obat</h2>
-        <button onClick={addObat} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl flex items-center gap-2 font-bold shadow-md transition hover:bg-blue-700"><Plus size={18}/> Tambah</button>
+        <h2 className="text-2xl font-black text-slate-800 tracking-tight">Persediaan Obat</h2>
+        <button onClick={addObat} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm flex items-center gap-2 font-bold shadow-md transition hover:bg-blue-700"><Plus size={16}/> Tambah</button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {filteredObat.map(o => (
-          <div key={o.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 group transition hover:shadow-md">
+          <div key={o.id} className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 group transition hover:shadow-md">
             <div className="flex justify-between items-start">
-              <div className={`p-3 rounded-2xl ${o.stok < 3 ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}><Pill size={24}/></div>
-              <button onClick={() => saveToStorage({...db, obat: db.obat.filter(x => x.id !== o.id)})} className="text-rose-400 p-2"><Trash2 size={18}/></button>
+              <div className={`p-2.5 rounded-xl ${o.stok < 3 ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}><Pill size={20}/></div>
+              <button onClick={() => saveToStorage({...db, obat: db.obat.filter(x => x.id !== o.id)})} className="text-rose-400 p-1.5"><Trash2 size={16}/></button>
             </div>
-            <div className="mt-4"><h4 className="font-black text-slate-800 text-lg">{o.nama}</h4><div className="flex items-center justify-between mt-2"><span className="text-2xl font-black text-slate-800">{o.stok}</span><span className={`text-[10px] px-3 py-1 rounded-full font-black ${o.stok < 3 ? 'bg-rose-600 text-white animate-pulse' : 'bg-emerald-50 text-emerald-600'}`}>{o.stok < 3 ? 'KRITIS' : 'STABIL'}</span></div></div>
+            <div className="mt-3"><h4 className="font-bold text-slate-800 text-sm truncate">{o.nama}</h4><div className="flex items-center justify-between mt-1.5"><span className="text-xl font-black text-slate-800">{o.stok}</span><span className={`text-[9px] px-2 py-0.5 rounded-full font-black ${o.stok < 3 ? 'bg-rose-600 text-white animate-pulse' : 'bg-emerald-50 text-emerald-600'}`}>{o.stok < 3 ? 'KRITIS' : 'STABIL'}</span></div></div>
           </div>
         ))}
       </div>
@@ -281,34 +281,34 @@ const FormTransaksi: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <h2 className="text-3xl font-black text-slate-800 tracking-tight">Pemeriksaan UKS</h2>
-      <div className="bg-white p-8 sm:p-10 rounded-[40px] shadow-xl border border-blue-50">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-          <div className="space-y-6">
-            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Users size={16}/> Identitas</h4>
-            <div className="space-y-4">
-              <div><label className="text-xs font-bold text-slate-500">Waktu</label><input type="datetime-local" className="w-full p-4 bg-slate-50 rounded-2xl outline-none" value={f.tgl} onChange={e => setF({...f, tgl: e.target.value})} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="text-xs font-bold text-slate-500">Kelas</label><select className="w-full p-4 bg-slate-50 rounded-2xl" value={f.kls} onChange={e => setF({...f, kls: e.target.value, sid: ''})}><option value="">Pilih</option>{classes.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                <div><label className="text-xs font-bold text-slate-500">Siswa</label><select className="w-full p-4 bg-slate-50 rounded-2xl" value={f.sid} onChange={e => setF({...f, sid: e.target.value})}><option value="">Pilih</option>{db.siswa.filter(x => x.kelas === f.kls).map(x => <option key={x.id} value={x.id}>{x.nama}</option>)}</select></div>
+    <div className="space-y-5 animate-in fade-in duration-500">
+      <h2 className="text-2xl font-black text-slate-800 tracking-tight">Pemeriksaan UKS</h2>
+      <div className="bg-white p-6 sm:p-8 rounded-[32px] shadow-xl border border-blue-50">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-5">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Users size={14}/> Identitas</h4>
+            <div className="space-y-3">
+              <div><label className="text-[10px] font-bold text-slate-500">Waktu</label><input type="datetime-local" className="w-full p-3 bg-slate-50 rounded-xl outline-none text-sm" value={f.tgl} onChange={e => setF({...f, tgl: e.target.value})} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="text-[10px] font-bold text-slate-500">Kelas</label><select className="w-full p-3 bg-slate-50 rounded-xl text-sm" value={f.kls} onChange={e => setF({...f, kls: e.target.value, sid: ''})}><option value="">Pilih</option>{classes.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+                <div><label className="text-[10px] font-bold text-slate-500">Siswa</label><select className="w-full p-3 bg-slate-50 rounded-xl text-sm" value={f.sid} onChange={e => setF({...f, sid: e.target.value})}><option value="">Pilih</option>{db.siswa.filter(x => x.kelas === f.kls).map(x => <option key={x.id} value={x.id}>{x.nama}</option>)}</select></div>
               </div>
             </div>
           </div>
-          <div className="space-y-6">
-            <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Stethoscope size={16}/> Diagnosa</h4>
-            <div className="space-y-4">
-              <div><label className="text-xs font-bold text-slate-500">Keluhan</label><select className="w-full p-4 bg-slate-50 rounded-2xl" value={f.kel} onChange={e => setF({...f, kel: e.target.value})}><option value="Pusing">Pusing</option><option value="Mual">Mual</option><option value="Demam">Demam</option><option value="Lainya">Lainya</option></select></div>
-              <div><label className="text-xs font-bold text-slate-500">Penanganan</label><select className="w-full p-4 bg-slate-50 rounded-2xl" value={f.pen} onChange={e => setF({...f, pen: e.target.value})}><option value="Istirahat">Istirahat</option><option value="Minum Obat">Minum Obat</option><option value="Pulang">Pulang (Surat Izin)</option></select></div>
+          <div className="space-y-5">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Stethoscope size={14}/> Diagnosa</h4>
+            <div className="space-y-3">
+              <div><label className="text-[10px] font-bold text-slate-500">Keluhan</label><select className="w-full p-3 bg-slate-50 rounded-xl text-sm" value={f.kel} onChange={e => setF({...f, kel: e.target.value})}><option value="Pusing">Pusing</option><option value="Mual">Mual</option><option value="Demam">Demam</option><option value="Lainya">Lainya</option></select></div>
+              <div><label className="text-[10px] font-bold text-slate-500">Penanganan</label><select className="w-full p-3 bg-slate-50 rounded-xl text-sm" value={f.pen} onChange={e => setF({...f, pen: e.target.value})}><option value="Istirahat">Istirahat</option><option value="Minum Obat">Minum Obat</option><option value="Pulang">Pulang (Surat Izin)</option></select></div>
             </div>
           </div>
-          <div className="md:col-span-2 bg-blue-600 p-8 rounded-[32px] shadow-2xl">
-            <div className="flex justify-between items-center text-white mb-6 font-black"><h4><Pill size={24}/> Penggunaan Obat</h4><button type="button" onClick={() => setOu([...ou, {id:'', qty:1}])} className="bg-white/20 px-4 py-2 rounded-xl text-xs">+ OBAT</button></div>
-            {ou.map((row, i) => (<div key={i} className="flex gap-3 mb-2"><select className="flex-1 p-3 rounded-xl" value={row.id} onChange={e => { const n = [...ou]; n[i].id = e.target.value; setOu(n); }}><option value="">Pilih Obat</option>{db.obat.map(o => <option key={o.id} value={o.id}>{o.nama}</option>)}</select><input type="number" className="w-20 p-3 rounded-xl text-center" value={row.qty} onChange={e => { const n = [...ou]; n[i].qty = parseInt(e.target.value || '1'); setOu(n); }} /><button type="button" onClick={() => setOu(ou.filter((_, idx) => idx !== i))} className="bg-rose-500 text-white p-3 rounded-xl"><Trash2 size={18}/></button></div>))}
+          <div className="md:col-span-2 bg-blue-600 p-6 rounded-[24px] shadow-2xl">
+            <div className="flex justify-between items-center text-white mb-4 font-black"><h4 className="text-sm flex items-center gap-2"><Pill size={18}/> Penggunaan Obat</h4><button type="button" onClick={() => setOu([...ou, {id:'', qty:1}])} className="bg-white/20 px-3 py-1.5 rounded-lg text-[10px]">+ OBAT</button></div>
+            {ou.map((row, i) => (<div key={i} className="flex gap-2 mb-2"><select className="flex-1 p-2.5 rounded-xl text-sm" value={row.id} onChange={e => { const n = [...ou]; n[i].id = e.target.value; setOu(n); }}><option value="">Pilih Obat</option>{db.obat.map(o => <option key={o.id} value={o.id}>{o.nama}</option>)}</select><input type="number" className="w-16 p-2.5 rounded-xl text-center text-sm" value={row.qty} onChange={e => { const n = [...ou]; n[i].qty = parseInt(e.target.value || '1'); setOu(n); }} /><button type="button" onClick={() => setOu(ou.filter((_, idx) => idx !== i))} className="bg-rose-500 text-white p-2.5 rounded-xl"><Trash2 size={16}/></button></div>))}
           </div>
-          <div className="md:col-span-2 flex justify-end gap-4">
-            {f.pen === 'Pulang' && <button type="button" onClick={() => handleProcess(true)} className="bg-slate-800 text-white px-8 py-4 rounded-3xl font-black shadow-lg hover:bg-slate-900 transition flex items-center gap-2"><Printer size={20}/> PREVIEW IZIN</button>}
-            <button type="button" onClick={() => handleProcess(false)} className="bg-blue-600 text-white px-8 py-4 rounded-3xl font-black shadow-lg hover:bg-blue-700 transition">SIMPAN REKAM MEDIS</button>
+          <div className="md:col-span-2 flex justify-end gap-3">
+            {f.pen === 'Pulang' && <button type="button" onClick={() => handleProcess(true)} className="bg-slate-800 text-white px-6 py-3 rounded-2xl text-sm font-black shadow-lg hover:bg-slate-900 transition flex items-center gap-2"><Printer size={16}/> PREVIEW IZIN</button>}
+            <button type="button" onClick={() => handleProcess(false)} className="bg-blue-600 text-white px-6 py-3 rounded-2xl text-sm font-black shadow-lg hover:bg-blue-700 transition">SIMPAN REKAM MEDIS</button>
           </div>
         </div>
       </div>
@@ -334,57 +334,57 @@ const Laporan: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) => v
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <h2 className="text-3xl font-black text-slate-800 tracking-tight">Laporan & Arsip</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 group transition hover:border-blue-200">
-          <h4 className="font-black text-slate-800 mb-1">Kunjungan UKS</h4>
+    <div className="space-y-5 animate-in fade-in duration-500">
+      <h2 className="text-2xl font-black text-slate-800 tracking-tight">Laporan & Arsip</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 group transition hover:border-blue-200">
+          <h4 className="font-bold text-slate-800 text-sm mb-1">Kunjungan UKS</h4>
           <button onClick={() => {
             const ws = XLSX.utils.json_to_sheet(db.transaksi);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Kunjungan");
             XLSX.writeFile(wb, "Kunjungan_UKS.xlsx");
-          }} className="w-full mt-4 bg-blue-600 text-white py-3 rounded-2xl flex justify-center items-center gap-2 font-black shadow-md"><Download size={18}/> EKSPOR XLSX</button>
+          }} className="w-full mt-3 bg-blue-600 text-white py-2.5 rounded-xl text-xs flex justify-center items-center gap-2 font-black shadow-md"><Download size={16}/> EKSPOR XLSX</button>
         </div>
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 group transition hover:border-emerald-200">
-          <h4 className="font-black text-slate-800 mb-1">Stok Obat</h4>
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 group transition hover:border-emerald-200">
+          <h4 className="font-bold text-slate-800 text-sm mb-1">Stok Obat</h4>
           <button onClick={() => {
             const ws = XLSX.utils.json_to_sheet(db.obat);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Stok_Obat");
             XLSX.writeFile(wb, "Stok_Obat.xlsx");
-          }} className="w-full mt-4 bg-emerald-600 text-white py-3 rounded-2xl flex justify-center items-center gap-2 font-black shadow-md"><Download size={18}/> EKSPOR XLSX</button>
+          }} className="w-full mt-3 bg-emerald-600 text-white py-2.5 rounded-xl text-xs flex justify-center items-center gap-2 font-black shadow-md"><Download size={16}/> EKSPOR XLSX</button>
         </div>
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 group transition hover:border-purple-200">
-          <h4 className="font-black text-slate-800 mb-1">Hasil Screening</h4>
+        <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 group transition hover:border-purple-200">
+          <h4 className="font-bold text-slate-800 text-sm mb-1">Hasil Screening</h4>
           <button onClick={() => {
             const ws = XLSX.utils.json_to_sheet(db.screening);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Screening");
             XLSX.writeFile(wb, "Screening_Siswa.xlsx");
-          }} className="w-full mt-4 bg-purple-600 text-white py-3 rounded-2xl flex justify-center items-center gap-2 font-black shadow-md"><Download size={18}/> EKSPOR XLSX</button>
+          }} className="w-full mt-3 bg-purple-600 text-white py-2.5 rounded-xl text-xs flex justify-center items-center gap-2 font-black shadow-md"><Download size={16}/> EKSPOR XLSX</button>
         </div>
       </div>
 
-      <div className="bg-white rounded-[32px] shadow-sm overflow-hidden border border-gray-100">
-        <div className="bg-slate-50 p-6 border-b flex justify-between items-center font-black text-slate-800">ARSIP 50 KEJADIAN TERAKHIR</div>
+      <div className="bg-white rounded-[24px] shadow-sm overflow-hidden border border-gray-100">
+        <div className="bg-slate-50 p-4 sm:p-5 border-b flex justify-between items-center text-xs font-black text-slate-800">ARSIP 50 KEJADIAN TERAKHIR</div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100/50"><tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest"><th className="px-6 py-4 text-left">Waktu</th><th className="px-6 py-4 text-left">Nama Siswa</th><th className="px-6 py-4 text-left">Kelas</th><th className="px-6 py-4 text-left">Keluhan</th><th className="px-6 py-4 text-right print:hidden">Aksi</th></tr></thead>
+          <table className="w-full text-xs sm:text-sm">
+            <thead className="bg-slate-100/50"><tr className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest"><th className="px-4 py-3 text-left">Waktu</th><th className="px-4 py-3 text-left">Nama Siswa</th><th className="px-4 py-3 text-left">Kelas</th><th className="px-4 py-3 text-left">Keluhan</th><th className="px-4 py-3 text-right print:hidden">Aksi</th></tr></thead>
             <tbody className="divide-y divide-slate-50">{filteredTx.slice(0, 50).map(tx => (
               <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
-                <td className="px-6 py-4 text-slate-400 font-mono text-xs">{tx.tanggal.replace('T', ' ')}</td>
-                <td className="px-6 py-4 font-black text-slate-700">{tx.namaSiswa}</td>
-                <td className="px-6 py-4 font-bold text-slate-500">{tx.kelas}</td>
-                <td className="px-6 py-4"><span className="px-2 py-1 bg-slate-100 rounded text-[10px] font-black text-slate-600">{tx.keluhan.toUpperCase()}</span></td>
-                <td className="px-6 py-4 text-right print:hidden flex justify-end gap-1">
+                <td className="px-4 py-3 text-slate-400 font-mono text-[10px] sm:text-xs">{tx.tanggal.replace('T', ' ')}</td>
+                <td className="px-4 py-3 font-bold text-slate-700">{tx.namaSiswa}</td>
+                <td className="px-4 py-3 font-bold text-slate-500">{tx.kelas}</td>
+                <td className="px-4 py-3"><span className="px-2 py-1 bg-slate-100 rounded text-[9px] sm:text-[10px] font-black text-slate-600">{tx.keluhan.toUpperCase()}</span></td>
+                <td className="px-4 py-3 text-right print:hidden flex justify-end gap-1">
                   {tx.penanganan.includes('Pulang') && (
-                    <button onClick={() => onPreview(tx)} className="text-slate-400 hover:text-slate-800 p-2 border border-slate-200 rounded-lg hover:bg-slate-50 transition" title="Print Preview">
-                      <FileBadge size={16}/>
+                    <button onClick={() => onPreview(tx)} className="text-slate-400 hover:text-slate-800 p-1.5 border border-slate-200 rounded-lg hover:bg-slate-50 transition" title="Print Preview">
+                      <FileBadge size={14}/>
                     </button>
                   )}
-                  <button onClick={() => handleEdit(tx)} className="text-blue-400 hover:text-blue-600 p-2"><Edit size={16}/></button>
-                  <button onClick={() => saveToStorage({...db, transaksi: db.transaksi.filter(x => x.id !== tx.id)})} className="text-rose-400 hover:text-rose-600 p-2"><Trash2 size={16}/></button>
+                  <button onClick={() => handleEdit(tx)} className="text-blue-400 hover:text-blue-600 p-1.5"><Edit size={14}/></button>
+                  <button onClick={() => saveToStorage({...db, transaksi: db.transaksi.filter(x => x.id !== tx.id)})} className="text-rose-400 hover:text-rose-600 p-1.5"><Trash2 size={14}/></button>
                 </td>
               </tr>
             ))}</tbody>
@@ -410,22 +410,22 @@ const ScreeningPage: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <h2 className="text-3xl font-black text-slate-800 tracking-tight">Screening Kesehatan</h2>
-      <div className="bg-white p-8 rounded-3xl shadow-sm border border-purple-50">
-        <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-4">
-            <h4 className="text-xs font-black text-purple-600 uppercase">Informasi</h4>
-            <input type="date" className="w-full p-3 bg-slate-50 rounded-xl" value={scForm.tanggal} onChange={e => setScForm({...scForm, tanggal: e.target.value})} />
-            <select className="w-full p-3 bg-slate-50 rounded-xl" value={scForm.kelas} onChange={e => setScForm({...scForm, kelas: e.target.value, siswaId: ''})}><option value="">Pilih Kelas</option>{uniqueClasses.map(c => <option key={c} value={c}>{c}</option>)}</select>
-            <select className="w-full p-3 bg-slate-50 rounded-xl" value={scForm.siswaId} onChange={e => setScForm({...scForm, siswaId: e.target.value})}><option value="">Pilih Siswa</option>{db.siswa.filter(x => x.kelas === scForm.kelas).map(x => <option key={x.id} value={x.id}>{x.nama}</option>)}</select>
+    <div className="space-y-5 animate-in fade-in duration-500">
+      <h2 className="text-2xl font-black text-slate-800 tracking-tight">Screening Kesehatan</h2>
+      <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-purple-50">
+        <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <h4 className="text-[10px] font-black text-purple-600 uppercase">Informasi</h4>
+            <input type="date" className="w-full p-2.5 bg-slate-50 rounded-xl text-sm" value={scForm.tanggal} onChange={e => setScForm({...scForm, tanggal: e.target.value})} />
+            <select className="w-full p-2.5 bg-slate-50 rounded-xl text-sm" value={scForm.kelas} onChange={e => setScForm({...scForm, kelas: e.target.value, siswaId: ''})}><option value="">Pilih Kelas</option>{uniqueClasses.map(c => <option key={c} value={c}>{c}</option>)}</select>
+            <select className="w-full p-2.5 bg-slate-50 rounded-xl text-sm" value={scForm.siswaId} onChange={e => setScForm({...scForm, siswaId: e.target.value})}><option value="">Pilih Siswa</option>{db.siswa.filter(x => x.kelas === scForm.kelas).map(x => <option key={x.id} value={x.id}>{x.nama}</option>)}</select>
           </div>
-          <div className="space-y-4">
-            <h4 className="text-xs font-black text-purple-600 uppercase">Evaluasi</h4>
-            <select className="w-full p-3 bg-slate-50 rounded-xl" value={scForm.hasil} onChange={e => setScForm({...scForm, hasil: e.target.value as any})}><option value="Sehat">Sehat</option><option value="Perlu Pemantauan">Perlu Pemantauan</option><option value="Perlu Rujukan">Perlu Rujukan</option></select>
-            <input type="text" className="w-full p-3 bg-slate-50 rounded-xl" placeholder="Catatan/Keluhan" value={scForm.keluhan} onChange={e => setScForm({...scForm, keluhan: e.target.value})} />
-            <input type="text" className="w-full p-3 bg-slate-50 rounded-xl" placeholder="Petugas Pemeriksa" value={scForm.dokter} onChange={e => setScForm({...scForm, dokter: e.target.value})} />
-            <button type="submit" className="w-full bg-purple-600 text-white p-4 rounded-xl font-bold shadow-md hover:bg-purple-700 transition">Simpan Screening</button>
+          <div className="space-y-3">
+            <h4 className="text-[10px] font-black text-purple-600 uppercase">Evaluasi</h4>
+            <select className="w-full p-2.5 bg-slate-50 rounded-xl text-sm" value={scForm.hasil} onChange={e => setScForm({...scForm, hasil: e.target.value as any})}><option value="Sehat">Sehat</option><option value="Perlu Pemantauan">Perlu Pemantauan</option><option value="Perlu Rujukan">Perlu Rujukan</option></select>
+            <input type="text" className="w-full p-2.5 bg-slate-50 rounded-xl text-sm" placeholder="Catatan/Keluhan" value={scForm.keluhan} onChange={e => setScForm({...scForm, keluhan: e.target.value})} />
+            <input type="text" className="w-full p-2.5 bg-slate-50 rounded-xl text-sm" placeholder="Petugas Pemeriksa" value={scForm.dokter} onChange={e => setScForm({...scForm, dokter: e.target.value})} />
+            <button type="submit" className="w-full bg-purple-600 text-white p-3 rounded-xl text-sm font-bold shadow-md hover:bg-purple-700 transition">Simpan Screening</button>
           </div>
         </form>
       </div>
@@ -484,44 +484,44 @@ const Pengaturan: React.FC<{ db: AppDatabase, setDb: (db: AppDatabase) => void, 
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <h2 className="text-3xl font-black text-slate-800 tracking-tight">Pengaturan</h2>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100">
-          <h3 className="font-black text-slate-800 mb-6 flex items-center gap-2"><Settings size={20}/> Kredensial Admin</h3>
-          <div className="space-y-4">
+    <div className="space-y-5 animate-in fade-in duration-500">
+      <h2 className="text-2xl font-black text-slate-800 tracking-tight">Pengaturan</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="font-bold text-slate-800 text-sm mb-5 flex items-center gap-2"><Settings size={18}/> Kredensial Admin</h3>
+          <div className="space-y-3">
             <div>
-              <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Username</label>
-              <input type="text" className="w-full p-4 bg-slate-50 rounded-2xl outline-none" value={db.user.username} onChange={e => setDb({...db, user: {...db.user, username: e.target.value}})} />
+              <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Username</label>
+              <input type="text" className="w-full p-3 bg-slate-50 rounded-xl outline-none text-sm" value={db.user.username} onChange={e => setDb({...db, user: {...db.user, username: e.target.value}})} />
             </div>
             <div>
-              <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">Password Baru</label>
-              <input type="password" className="w-full p-4 bg-slate-50 rounded-2xl outline-none" value={db.user.password} onChange={e => setDb({...db, user: {...db.user, password: e.target.value}})} />
+              <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Password Baru</label>
+              <input type="password" className="w-full p-3 bg-slate-50 rounded-xl outline-none text-sm" value={db.user.password} onChange={e => setDb({...db, user: {...db.user, password: e.target.value}})} />
             </div>
-            <button onClick={() => { saveToStorage(db); Swal.fire('Tersimpan', 'Profil admin telah diperbarui.', 'success'); }} className="bg-blue-600 text-white py-4 rounded-2xl font-black w-full shadow-md hover:bg-blue-700 transition">Update Profil</button>
+            <button onClick={() => { saveToStorage(db); Swal.fire('Tersimpan', 'Profil admin telah diperbarui.', 'success'); }} className="bg-blue-600 text-white py-3 rounded-xl text-sm font-black w-full shadow-md hover:bg-blue-700 transition">Update Profil</button>
           </div>
         </div>
 
-        <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 flex flex-col">
-          <h3 className="font-black text-slate-800 mb-6 flex items-center gap-2"><Download size={20} className="text-emerald-500"/> Pemeliharaan Data</h3>
-          <p className="text-xs text-slate-400 mb-6 leading-relaxed">Cadangkan data secara rutin ke dalam file .json untuk mencegah kehilangan data jika cache browser dibersihkan.</p>
-          <div className="space-y-4 mt-auto">
-            <button onClick={handleBackup} className="w-full bg-emerald-600 text-white py-4 rounded-2xl flex justify-center items-center gap-3 font-black hover:bg-emerald-700 transition shadow-md">
-              <Download size={20}/> Download Backup (.json)
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+          <h3 className="font-bold text-slate-800 text-sm mb-4 flex items-center gap-2"><Download size={18} className="text-emerald-500"/> Pemeliharaan Data</h3>
+          <p className="text-[11px] text-slate-400 mb-5 leading-relaxed">Cadangkan data secara rutin ke dalam file .json untuk mencegah kehilangan data jika cache browser dibersihkan.</p>
+          <div className="space-y-3 mt-auto">
+            <button onClick={handleBackup} className="w-full bg-emerald-600 text-white py-3 rounded-xl text-sm flex justify-center items-center gap-2 font-black hover:bg-emerald-700 transition shadow-md">
+              <Download size={16}/> Download Backup (.json)
             </button>
-            <label className="w-full bg-slate-800 text-white py-4 rounded-2xl flex justify-center items-center gap-3 font-black cursor-pointer hover:bg-slate-900 transition shadow-md">
-              <Upload size={20}/> Restore dari Backup
+            <label className="w-full bg-slate-800 text-white py-3 rounded-xl text-sm flex justify-center items-center gap-2 font-black cursor-pointer hover:bg-slate-900 transition shadow-md">
+              <Upload size={16}/> Restore dari Backup
               <input type="file" className="hidden" accept=".json" onChange={handleRestore} />
             </label>
           </div>
         </div>
 
-        <div className="md:col-span-2 bg-rose-50 p-8 rounded-[32px] border border-rose-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <div className="md:col-span-2 bg-rose-50 p-6 rounded-2xl border border-rose-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h3 className="font-black text-rose-800 mb-2 flex items-center gap-2"><AlertTriangle size={20}/> Bahaya: Reset Database</h3>
-            <p className="text-xs text-rose-700 opacity-70 font-bold">Tindakan ini akan menghapus semua catatan medis, stok obat, dan data siswa secara permanen!</p>
+            <h3 className="font-bold text-rose-800 text-sm mb-1 flex items-center gap-2"><AlertTriangle size={18}/> Bahaya: Reset Database</h3>
+            <p className="text-[10px] text-rose-700 opacity-70 font-bold">Tindakan ini akan menghapus semua catatan medis, stok obat, dan data siswa secara permanen!</p>
           </div>
-          <button onClick={handleReset} className="bg-rose-600 text-white px-8 py-4 rounded-2xl font-black shadow-md hover:bg-rose-700 transition whitespace-nowrap">
+          <button onClick={handleReset} className="bg-rose-600 text-white px-6 py-3 rounded-xl text-sm font-black shadow-md hover:bg-rose-700 transition whitespace-nowrap">
             Reset Factory Data
           </button>
         </div>
