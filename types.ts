@@ -1,9 +1,4 @@
 
-export interface User {
-  username: string;
-  password: string;
-}
-
 export interface Student {
   id: string | number;
   nama: string;
@@ -38,7 +33,6 @@ export interface Screening {
 }
 
 export interface AppDatabase {
-  user: User;
   siswa: Student[];
   obat: Medicine[];
   transaksi: Transaction[];
