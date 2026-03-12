@@ -177,8 +177,8 @@ const Dashboard: React.FC<{ db: AppDatabase, setActivePage: (p: PageId) => void 
         <div className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-gray-100">
           <h3 className="text-base font-bold mb-5 flex items-center gap-2 text-slate-800"><AlertTriangle size={18} className="text-amber-500"/> Notifikasi Sistem</h3>
           <div className="space-y-3">
-            {lowStock.map(o => (
-              <div key={o.id} className="p-3 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
+            {lowStock.map((o, i) => (
+              <div key={`${o.id}-${i}`} className="p-3 bg-amber-50 rounded-xl border border-amber-100 flex gap-3">
                 <div className="p-2 bg-amber-200 text-amber-700 rounded-lg h-fit"><Pill size={14}/></div>
                 <div><p className="text-[10px] font-black text-amber-800 uppercase">Stok Kritis</p><p className="text-xs text-amber-700 mt-0.5"><strong>{o.nama}</strong> sisa {o.stok} unit.</p></div>
               </div>
@@ -196,7 +196,7 @@ const MasterSiswa: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) 
   const filteredSiswa = db.siswa.filter(s => s.nama.toLowerCase().includes(searchTerm.toLowerCase()) || s.kelas.toLowerCase().includes(searchTerm.toLowerCase()));
   const addSiswa = async () => {
     const { value: v } = await Swal.fire({ title: 'Tambah Siswa', html: '<input id="i1" class="swal2-input" placeholder="Nama"><input id="i2" class="swal2-input" placeholder="Kelas">', preConfirm: () => [(document.getElementById('i1') as HTMLInputElement).value, (document.getElementById('i2') as HTMLInputElement).value], customClass:{popup:'rounded-3xl'} });
-    if (v && v[0] && v[1]) saveToStorage({ ...db, siswa: [...db.siswa, { id: Date.now(), nama: v[0], kelas: v[1] }] });
+    if (v && v[0] && v[1]) saveToStorage({ ...db, siswa: [...db.siswa, { id: Date.now() + Math.random(), nama: v[0], kelas: v[1] }] });
   };
   return (
     <div className="space-y-5 animate-in fade-in duration-500">
@@ -208,7 +208,7 @@ const MasterSiswa: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 border-b"><tr><th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">ID</th><th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Nama</th><th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Kelas</th><th className="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Aksi</th></tr></thead>
-            <tbody className="divide-y divide-gray-50">{filteredSiswa.map((s, i) => (<tr key={s.id} className="hover:bg-slate-50"><td className="px-4 py-3 font-mono text-xs">{i+1}</td><td className="px-4 py-3 font-bold text-slate-700">{s.nama}</td><td className="px-4 py-3"><span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-[10px] font-black">{s.kelas}</span></td><td className="px-4 py-3 text-right"><button onClick={() => saveToStorage({...db, siswa: db.siswa.filter(x => x.id !== s.id)})} className="text-rose-400 hover:text-rose-600 p-1.5"><Trash2 size={16}/></button></td></tr>))}</tbody>
+            <tbody className="divide-y divide-gray-50">{filteredSiswa.map((s, i) => (<tr key={`${s.id}-${i}`} className="hover:bg-slate-50"><td className="px-4 py-3 font-mono text-xs">{i+1}</td><td className="px-4 py-3 font-bold text-slate-700">{s.nama}</td><td className="px-4 py-3"><span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-[10px] font-black">{s.kelas}</span></td><td className="px-4 py-3 text-right"><button onClick={() => saveToStorage({...db, siswa: db.siswa.filter(x => x.id !== s.id)})} className="text-rose-400 hover:text-rose-600 p-1.5"><Trash2 size={16}/></button></td></tr>))}</tbody>
           </table>
         </div>
       </div>
@@ -221,7 +221,7 @@ const MasterObat: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) =
   const filteredObat = db.obat.filter(o => o.nama.toLowerCase().includes(searchTerm.toLowerCase()));
   const addObat = async () => {
     const { value: v } = await Swal.fire({ title: 'Tambah Obat', html: '<input id="i1" class="swal2-input" placeholder="Nama"><input id="i2" type="number" class="swal2-input" placeholder="Stok">', preConfirm: () => [(document.getElementById('i1') as HTMLInputElement).value, (document.getElementById('i2') as HTMLInputElement).value] });
-    if (v && v[0]) saveToStorage({ ...db, obat: [...db.obat, { id: Date.now(), nama: v[0], stok: parseInt(v[1] || '0') }] });
+    if (v && v[0]) saveToStorage({ ...db, obat: [...db.obat, { id: Date.now() + Math.random(), nama: v[0], stok: parseInt(v[1] || '0') }] });
   };
   return (
     <div className="space-y-5 animate-in fade-in duration-500">
@@ -230,8 +230,8 @@ const MasterObat: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) =
         <button onClick={addObat} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm flex items-center gap-2 font-bold shadow-md transition hover:bg-blue-700"><Plus size={16}/> Tambah</button>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-        {filteredObat.map(o => (
-          <div key={o.id} className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 group transition hover:shadow-md">
+        {filteredObat.map((o, i) => (
+          <div key={`${o.id}-${i}`} className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 group transition hover:shadow-md">
             <div className="flex justify-between items-start">
               <div className={`p-2.5 rounded-xl ${o.stok < 3 ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}><Pill size={20}/></div>
               <button onClick={() => saveToStorage({...db, obat: db.obat.filter(x => x.id !== o.id)})} className="text-rose-400 p-1.5"><Trash2 size={16}/></button>
@@ -264,7 +264,7 @@ const FormTransaksi: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase
       return '';
     }).filter(Boolean).join(', ');
 
-    const tx: Transaction = { id: Date.now(), tanggal: f.tgl, namaSiswa: s.nama, kelas: f.kls, keluhan: f.kel === 'Lainya' ? f.kl : f.kel, penanganan: f.pen, obatDetail: det };
+    const tx: Transaction = { id: Date.now() + Math.random(), tanggal: f.tgl, namaSiswa: s.nama, kelas: f.kls, keluhan: f.kel === 'Lainya' ? f.kl : f.kel, penanganan: f.pen, obatDetail: det };
     
     if (isPreview) {
       onPreview(tx);
@@ -290,8 +290,8 @@ const FormTransaksi: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase
             <div className="space-y-3">
               <div><label className="text-[10px] font-bold text-slate-500">Waktu</label><input type="datetime-local" className="w-full p-3 bg-slate-50 rounded-xl outline-none text-sm" value={f.tgl} onChange={e => setF({...f, tgl: e.target.value})} /></div>
               <div className="grid grid-cols-2 gap-3">
-                <div><label className="text-[10px] font-bold text-slate-500">Kelas</label><select className="w-full p-3 bg-slate-50 rounded-xl text-sm" value={f.kls} onChange={e => setF({...f, kls: e.target.value, sid: ''})}><option value="">Pilih</option>{classes.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                <div><label className="text-[10px] font-bold text-slate-500">Siswa</label><select className="w-full p-3 bg-slate-50 rounded-xl text-sm" value={f.sid} onChange={e => setF({...f, sid: e.target.value})}><option value="">Pilih</option>{db.siswa.filter(x => x.kelas === f.kls).map(x => <option key={x.id} value={x.id}>{x.nama}</option>)}</select></div>
+                <div><label className="text-[10px] font-bold text-slate-500">Kelas</label><select className="w-full p-3 bg-slate-50 rounded-xl text-sm" value={f.kls} onChange={e => setF({...f, kls: e.target.value, sid: ''})}><option value="">Pilih</option>{classes.map((c, i) => <option key={`${c}-${i}`} value={c}>{c}</option>)}</select></div>
+                <div><label className="text-[10px] font-bold text-slate-500">Siswa</label><select className="w-full p-3 bg-slate-50 rounded-xl text-sm" value={f.sid} onChange={e => setF({...f, sid: e.target.value})}><option value="">Pilih</option>{db.siswa.filter(x => x.kelas === f.kls).map((x, i) => <option key={`${x.id}-${i}`} value={x.id}>{x.nama}</option>)}</select></div>
               </div>
             </div>
           </div>
@@ -304,7 +304,7 @@ const FormTransaksi: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase
           </div>
           <div className="md:col-span-2 bg-blue-600 p-6 rounded-[24px] shadow-2xl">
             <div className="flex justify-between items-center text-white mb-4 font-black"><h4 className="text-sm flex items-center gap-2"><Pill size={18}/> Penggunaan Obat</h4><button type="button" onClick={() => setOu([...ou, {id:'', qty:1}])} className="bg-white/20 px-3 py-1.5 rounded-lg text-[10px]">+ OBAT</button></div>
-            {ou.map((row, i) => (<div key={i} className="flex gap-2 mb-2"><select className="flex-1 p-2.5 rounded-xl text-sm" value={row.id} onChange={e => { const n = [...ou]; n[i].id = e.target.value; setOu(n); }}><option value="">Pilih Obat</option>{db.obat.map(o => <option key={o.id} value={o.id}>{o.nama}</option>)}</select><input type="number" className="w-16 p-2.5 rounded-xl text-center text-sm" value={row.qty} onChange={e => { const n = [...ou]; n[i].qty = parseInt(e.target.value || '1'); setOu(n); }} /><button type="button" onClick={() => setOu(ou.filter((_, idx) => idx !== i))} className="bg-rose-500 text-white p-2.5 rounded-xl"><Trash2 size={16}/></button></div>))}
+            {ou.map((row, i) => (<div key={i} className="flex gap-2 mb-2"><select className="flex-1 p-2.5 rounded-xl text-sm" value={row.id} onChange={e => { const n = [...ou]; n[i].id = e.target.value; setOu(n); }}><option value="">Pilih Obat</option>{db.obat.map((o, idx) => <option key={`${o.id}-${idx}`} value={o.id}>{o.nama}</option>)}</select><input type="number" className="w-16 p-2.5 rounded-xl text-center text-sm" value={row.qty} onChange={e => { const n = [...ou]; n[i].qty = parseInt(e.target.value || '1'); setOu(n); }} /><button type="button" onClick={() => setOu(ou.filter((_, idx) => idx !== i))} className="bg-rose-500 text-white p-2.5 rounded-xl"><Trash2 size={16}/></button></div>))}
           </div>
           <div className="md:col-span-2 flex justify-end gap-3">
             {f.pen === 'Pulang' && <button type="button" onClick={() => handleProcess(true)} className="bg-slate-800 text-white px-6 py-3 rounded-2xl text-sm font-black shadow-lg hover:bg-slate-900 transition flex items-center gap-2"><Printer size={16}/> PREVIEW IZIN</button>}
@@ -371,8 +371,8 @@ const Laporan: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) => v
         <div className="overflow-x-auto">
           <table className="w-full text-xs sm:text-sm">
             <thead className="bg-slate-100/50"><tr className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-widest"><th className="px-4 py-3 text-left">Waktu</th><th className="px-4 py-3 text-left">Nama Siswa</th><th className="px-4 py-3 text-left">Kelas</th><th className="px-4 py-3 text-left">Keluhan</th><th className="px-4 py-3 text-right print:hidden">Aksi</th></tr></thead>
-            <tbody className="divide-y divide-slate-50">{filteredTx.slice(0, 50).map(tx => (
-              <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
+            <tbody className="divide-y divide-slate-50">{filteredTx.slice(0, 50).map((tx, i) => (
+              <tr key={`${tx.id}-${i}`} className="hover:bg-slate-50 transition-colors">
                 <td className="px-4 py-3 text-slate-400 font-mono text-[10px] sm:text-xs">{tx.tanggal.replace('T', ' ')}</td>
                 <td className="px-4 py-3 font-bold text-slate-700">{tx.namaSiswa}</td>
                 <td className="px-4 py-3 font-bold text-slate-500">{tx.kelas}</td>
@@ -404,7 +404,7 @@ const ScreeningPage: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase
     e.preventDefault();
     const s = db.siswa.find(x => x.id.toString() === scForm.siswaId);
     if (!s) return;
-    const entry: Screening = { id: Date.now(), tanggal: scForm.tanggal, studentId: s.id, namaSiswa: s.nama, kelas: s.kelas, hasil: scForm.hasil, keluhan: scForm.keluhan, dokter: scForm.dokter };
+    const entry: Screening = { id: Date.now() + Math.random(), tanggal: scForm.tanggal, studentId: s.id, namaSiswa: s.nama, kelas: s.kelas, hasil: scForm.hasil, keluhan: scForm.keluhan, dokter: scForm.dokter };
     saveToStorage({ ...db, screening: [entry, ...db.screening] });
     Swal.fire('Berhasil', 'Data screening disimpan', 'success');
   };
@@ -417,8 +417,8 @@ const ScreeningPage: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase
           <div className="space-y-3">
             <h4 className="text-[10px] font-black text-purple-600 uppercase">Informasi</h4>
             <input type="date" className="w-full p-2.5 bg-slate-50 rounded-xl text-sm" value={scForm.tanggal} onChange={e => setScForm({...scForm, tanggal: e.target.value})} />
-            <select className="w-full p-2.5 bg-slate-50 rounded-xl text-sm" value={scForm.kelas} onChange={e => setScForm({...scForm, kelas: e.target.value, siswaId: ''})}><option value="">Pilih Kelas</option>{uniqueClasses.map(c => <option key={c} value={c}>{c}</option>)}</select>
-            <select className="w-full p-2.5 bg-slate-50 rounded-xl text-sm" value={scForm.siswaId} onChange={e => setScForm({...scForm, siswaId: e.target.value})}><option value="">Pilih Siswa</option>{db.siswa.filter(x => x.kelas === scForm.kelas).map(x => <option key={x.id} value={x.id}>{x.nama}</option>)}</select>
+            <select className="w-full p-2.5 bg-slate-50 rounded-xl text-sm" value={scForm.kelas} onChange={e => setScForm({...scForm, kelas: e.target.value, siswaId: ''})}><option value="">Pilih Kelas</option>{uniqueClasses.map((c, i) => <option key={`${c}-${i}`} value={c}>{c}</option>)}</select>
+            <select className="w-full p-2.5 bg-slate-50 rounded-xl text-sm" value={scForm.siswaId} onChange={e => setScForm({...scForm, siswaId: e.target.value})}><option value="">Pilih Siswa</option>{db.siswa.filter(x => x.kelas === scForm.kelas).map((x, i) => <option key={`${x.id}-${i}`} value={x.id}>{x.nama}</option>)}</select>
           </div>
           <div className="space-y-3">
             <h4 className="text-[10px] font-black text-purple-600 uppercase">Evaluasi</h4>
@@ -672,9 +672,9 @@ const App: React.FC = () => {
             { id: 'screening', icon: <ClipboardCheck size={20}/>, label: 'Screening' },
             { id: 'laporan', icon: <FileText size={20}/>, label: 'Laporan' },
             { id: 'pengaturan', icon: <Settings size={20}/>, label: 'Setting' },
-          ].map(i => (
-            <button key={i.id} onClick={() => { setActivePage(i.id as any); if (window.innerWidth < 1024) setSidebarOpen(false); }} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition ${activePage === i.id ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800'}`}>
-              {i.icon}<span className="text-sm font-bold lg:block">{i.label}</span>
+          ].map((item, idx) => (
+            <button key={`${item.id}-${idx}`} onClick={() => { setActivePage(item.id as any); if (window.innerWidth < 1024) setSidebarOpen(false); }} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition ${activePage === item.id ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800'}`}>
+              {item.icon}<span className="text-sm font-bold lg:block">{item.label}</span>
             </button>
           ))}
         </nav>
