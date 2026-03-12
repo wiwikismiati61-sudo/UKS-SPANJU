@@ -48,6 +48,7 @@ import {
 
 // --- Constants & Defaults ---
 const DEFAULT_DB: AppDatabase = {
+  user: { username: 'admin', password: '123' },
   siswa: [
     { id: 1, nama: 'Budi Santoso', kelas: '7A' },
     { id: 2, nama: 'Siti Aminah', kelas: '8B' },
@@ -452,7 +453,7 @@ const Pengaturan: React.FC<{ db: AppDatabase, setDb: (db: AppDatabase) => void, 
     reader.onload = (evt) => {
       try {
         const json = JSON.parse(evt.target?.result as string);
-        if (json.siswa) {
+        if (json.user && json.siswa) {
           saveToStorage(json);
           Swal.fire('Restorasi Berhasil', 'Database UKS telah diperbarui dari file cadangan.', 'success');
         } else {
@@ -485,7 +486,22 @@ const Pengaturan: React.FC<{ db: AppDatabase, setDb: (db: AppDatabase) => void, 
   return (
     <div className="space-y-5 animate-in fade-in duration-500">
       <h2 className="text-2xl font-black text-slate-800 tracking-tight">Pengaturan</h2>
-      <div className="grid grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h3 className="font-bold text-slate-800 text-sm mb-5 flex items-center gap-2"><Settings size={18}/> Kredensial Admin</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Username</label>
+              <input type="text" className="w-full p-3 bg-slate-50 rounded-xl outline-none text-sm" value={db.user.username} onChange={e => setDb({...db, user: {...db.user, username: e.target.value}})} />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Password Baru</label>
+              <input type="password" className="w-full p-3 bg-slate-50 rounded-xl outline-none text-sm" value={db.user.password} onChange={e => setDb({...db, user: {...db.user, password: e.target.value}})} />
+            </div>
+            <button onClick={() => { saveToStorage(db); Swal.fire('Tersimpan', 'Profil admin telah diperbarui.', 'success'); }} className="bg-blue-600 text-white py-3 rounded-xl text-sm font-black w-full shadow-md hover:bg-blue-700 transition">Update Profil</button>
+          </div>
+        </div>
+
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
           <h3 className="font-bold text-slate-800 text-sm mb-4 flex items-center gap-2"><Download size={18} className="text-emerald-500"/> Pemeliharaan Data</h3>
           <p className="text-[11px] text-slate-400 mb-5 leading-relaxed">Cadangkan data secara rutin ke dalam file .json untuk mencegah kehilangan data jika cache browser dibersihkan.</p>
@@ -500,7 +516,7 @@ const Pengaturan: React.FC<{ db: AppDatabase, setDb: (db: AppDatabase) => void, 
           </div>
         </div>
 
-        <div className="bg-rose-50 p-6 rounded-2xl border border-rose-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="md:col-span-2 bg-rose-50 p-6 rounded-2xl border border-rose-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h3 className="font-bold text-rose-800 text-sm mb-1 flex items-center gap-2"><AlertTriangle size={18}/> Bahaya: Reset Database</h3>
             <p className="text-[10px] text-rose-700 opacity-70 font-bold">Tindakan ini akan menghapus semua catatan medis, stok obat, dan data siswa secara permanen!</p>
@@ -516,11 +532,14 @@ const Pengaturan: React.FC<{ db: AppDatabase, setDb: (db: AppDatabase) => void, 
 
 // --- Main App Component ---
 const App: React.FC = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [db, setDb] = useState<AppDatabase>(DEFAULT_DB);
   const [searchTerm, setSearchTerm] = useState('');
   const [previewData, setPreviewData] = useState<Transaction | null>(null);
+
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
 
   useEffect(() => {
     const saved = localStorage.getItem('uks_db');
@@ -531,6 +550,16 @@ const App: React.FC = () => {
   }, []);
 
   const saveToStorage = useCallback((newDb: AppDatabase) => { setDb(newDb); localStorage.setItem('uks_db', JSON.stringify(newDb)); }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginForm.username === db.user.username && loginForm.password === db.user.password) {
+      setIsLoggedIn(true);
+      Swal.fire({ icon: 'success', title: 'Selamat Datang!', timer: 1500, showConfirmButton: false, customClass: { popup: 'rounded-3xl' } });
+    } else {
+      Swal.fire({ icon: 'error', title: 'Login Gagal', text: 'Kredensial salah!' });
+    }
+  };
 
   const handleRealPrint = () => {
     if (!previewData) return;
@@ -557,6 +586,41 @@ const App: React.FC = () => {
       window.print();
       setPreviewData(null);
     }, 200);
+  };
+
+  const renderContent = () => {
+    if (activePage === 'dashboard') {
+      return <Dashboard db={db} setActivePage={setActivePage} />;
+    }
+
+    if (!isLoggedIn) {
+      return (
+        <div className="flex items-center justify-center h-[calc(100vh-150px)]">
+          <div className="bg-white p-10 rounded-[40px] shadow-xl w-full max-w-md border border-slate-100">
+            <div className="text-center mb-8">
+              <div className="inline-block p-4 bg-blue-600 rounded-3xl mb-4 shadow-lg shadow-blue-200"><Settings size={40} className="text-white"/></div>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tighter">Login Admin</h2>
+              <p className="text-xs text-slate-500 mt-2">Silakan login untuk mengakses menu ini.</p>
+            </div>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <input type="text" className="w-full p-4 bg-slate-50 rounded-2xl outline-none font-bold text-sm" placeholder="Username" value={loginForm.username} onChange={e => setLoginForm({...loginForm, username: e.target.value})} required />
+              <input type="password" className="w-full p-4 bg-slate-50 rounded-2xl outline-none font-bold text-sm" placeholder="Password" value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} required />
+              <button type="submit" className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-lg hover:bg-blue-700 transition active:scale-95 text-sm">Masuk</button>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    switch (activePage) {
+      case 'master-siswa': return <MasterSiswa db={db} saveToStorage={saveToStorage} searchTerm={searchTerm} />;
+      case 'master-obat': return <MasterObat db={db} saveToStorage={saveToStorage} searchTerm={searchTerm} />;
+      case 'transaksi': return <FormTransaksi db={db} saveToStorage={saveToStorage} onPreview={setPreviewData} />;
+      case 'screening': return <ScreeningPage db={db} saveToStorage={saveToStorage} />;
+      case 'laporan': return <Laporan db={db} saveToStorage={saveToStorage} searchTerm={searchTerm} onPreview={setPreviewData} />;
+      case 'pengaturan': return <Pengaturan db={db} setDb={setDb} saveToStorage={saveToStorage} />;
+      default: return null;
+    }
   };
 
   return (
@@ -614,22 +678,23 @@ const App: React.FC = () => {
             </button>
           ))}
         </nav>
+        {isLoggedIn && (
+          <div className="p-6 border-t border-slate-800">
+            <button onClick={() => setIsLoggedIn(false)} className="w-full flex items-center gap-4 p-4 rounded-2xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition"><LogOut size={20}/><span className="font-bold lg:block">Logout</span></button>
+          </div>
+        )}
       </aside>
 
       <main className={`flex-1 transition-all duration-300 lg:ml-72 print:m-0 print:ml-0`}>
         <header className="h-24 bg-white/80 backdrop-blur-sm border-b border-slate-100 px-6 lg:px-12 flex items-center justify-between sticky top-0 z-30 print:hidden">
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-3 bg-slate-100 rounded-xl lg:hidden"><Menu size={20}/></button>
           <div className="flex items-center gap-4 bg-slate-100 px-4 py-3 rounded-2xl border w-full max-w-xs lg:max-w-md"><Search size={18} className="text-slate-400"/><input type="text" placeholder={`Cari data...`} className="bg-transparent border-none outline-none text-sm w-full font-bold" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
-          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-black text-slate-600">A</div>
+          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-black text-slate-600">
+            {isLoggedIn ? db.user.username.charAt(0).toUpperCase() : 'G'}
+          </div>
         </header>
         <div className="p-6 lg:p-12 max-w-7xl mx-auto print:p-0">
-          {activePage === 'dashboard' && <Dashboard db={db} setActivePage={setActivePage} />}
-          {activePage === 'master-siswa' && <MasterSiswa db={db} saveToStorage={saveToStorage} searchTerm={searchTerm} />}
-          {activePage === 'master-obat' && <MasterObat db={db} saveToStorage={saveToStorage} searchTerm={searchTerm} />}
-          {activePage === 'transaksi' && <FormTransaksi db={db} saveToStorage={saveToStorage} onPreview={setPreviewData} />}
-          {activePage === 'screening' && <ScreeningPage db={db} saveToStorage={saveToStorage} />}
-          {activePage === 'laporan' && <Laporan db={db} saveToStorage={saveToStorage} searchTerm={searchTerm} onPreview={setPreviewData} />}
-          {activePage === 'pengaturan' && <Pengaturan db={db} setDb={setDb} saveToStorage={saveToStorage} />}
+          {renderContent()}
         </div>
       </main>
 
