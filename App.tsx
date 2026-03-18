@@ -1083,9 +1083,15 @@ const App: React.FC = () => {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       Swal.fire({ icon: 'success', title: 'Selamat Datang!', timer: 1500, showConfirmButton: false });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      Swal.fire('Login Gagal', 'Gagal masuk dengan Google.', 'error');
+      let msg = 'Gagal masuk dengan Google.';
+      if (error.code === 'auth/unauthorized-domain') {
+        msg = 'Domain ini belum diizinkan di Firebase Console. Silakan tambahkan ' + window.location.hostname + ' ke Authorized Domains.';
+      } else if (error.code === 'auth/popup-blocked') {
+        msg = 'Popup login terblokir oleh browser. Silakan izinkan popup untuk situs ini.';
+      }
+      Swal.fire('Login Gagal', msg, 'error');
     }
   };
 
