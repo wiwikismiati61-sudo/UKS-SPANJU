@@ -1,0 +1,43 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Student record in SMPN 7 UKS system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID for the student" },
+        "name": { "type": "string", "description": "Full name of the student" },
+        "class": { "type": "string", "description": "Class of the student (e.g., 7A, 8B)" },
+        "gender": { "type": "string", "enum": ["Laki-laki", "Perempuan"], "description": "Gender of the student" },
+        "healthNotes": { "type": "string", "description": "General health notes or allergies" }
+      },
+      "required": ["id", "name", "class", "gender"]
+    },
+    "Visit": {
+      "title": "Visit",
+      "description": "UKS visit record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID for the visit" },
+        "studentId": { "type": "string", "description": "Reference to the student ID" },
+        "studentName": { "type": "string", "description": "Name of the student at the time of visit" },
+        "studentClass": { "type": "string", "description": "Class of the student at the time of visit" },
+        "complaint": { "type": "string", "description": "The health complaint" },
+        "treatment": { "type": "string", "description": "The treatment provided" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the visit occurred" },
+        "status": { "type": "string", "enum": ["Istirahat", "Kembali ke Kelas", "Rujuk"], "description": "Current status of the student" }
+      },
+      "required": ["id", "studentId", "studentName", "studentClass", "complaint", "treatment", "timestamp", "status"]
+    }
+  },
+  "firestore": {
+    "/students/{studentId}": {
+      "schema": "Student",
+      "description": "Collection of students"
+    },
+    "/visits/{visitId}": {
+      "schema": "Visit",
+      "description": "Collection of UKS visits"
+    }
+  }
+}

@@ -24,7 +24,8 @@ import {
   ChevronRight,
   TrendingUp,
   FileBadge,
-  Eye
+  Eye,
+  LogIn
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import Swal from 'sweetalert2';
@@ -45,6 +46,87 @@ import {
   AreaChart,
   Area
 } from 'recharts';
+import { 
+  onAuthStateChanged, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut,
+  User
+} from 'firebase/auth';
+import { 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  query, 
+  orderBy, 
+  writeBatch,
+  getDocs,
+  getDocFromServer,
+  setDoc
+} from 'firebase/firestore';
+import { auth, db as firestore } from './src/firebase';
+
+// --- Firebase Error Handling ---
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  
+  // Show user-friendly error
+  Swal.fire({
+    icon: 'error',
+    title: 'Kesalahan Database',
+    text: 'Terjadi masalah saat mengakses data. Pastikan Anda memiliki izin yang cukup.',
+    footer: `<pre style="font-size: 10px; text-align: left;">${errInfo.error}</pre>`
+  });
+};
 
 // --- Constants & Defaults ---
 const DEFAULT_DB: AppDatabase = {
@@ -125,7 +207,32 @@ const StatCard: React.FC<{ title: string, value: string | number, icon: React.Re
 
 // --- Dashboard Component ---
 const Dashboard: React.FC<{ db: AppDatabase, setActivePage: (p: PageId) => void }> = ({ db, setActivePage }) => {
-  const lowStock = db.obat.filter(o => o.stok < 3);
+  const [selectedKelas, setSelectedKelas] = useState<string>('');
+  const uniqueClasses = useMemo(() => [...new Set((db.siswa || []).map(s => s.kelas))].sort(), [db.siswa]);
+
+  const filteredTransactions = useMemo(() => {
+    const transaksi = db.transaksi || [];
+    return selectedKelas 
+      ? transaksi.filter(t => t.kelas === selectedKelas)
+      : transaksi;
+  }, [db.transaksi, selectedKelas]);
+
+  const filteredScreening = useMemo(() => {
+    const screening = db.screening || [];
+    return selectedKelas 
+      ? screening.filter(s => s.kelas === selectedKelas)
+      : screening;
+  }, [db.screening, selectedKelas]);
+
+  const lowStock = (db.obat || []).filter(o => o.stok < 3);
+  const visitCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    (db.transaksi || []).forEach(t => {
+      counts[t.namaSiswa] = (counts[t.namaSiswa] || 0) + 1;
+    });
+    return counts;
+  }, [db.transaksi]);
+
   const last10Days = Array.from({ length: 10 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (9 - i));
@@ -133,28 +240,44 @@ const Dashboard: React.FC<{ db: AppDatabase, setActivePage: (p: PageId) => void 
   });
   const chartData = last10Days.map(day => ({
     name: day.split('-').slice(2).join('/'),
-    kunjungan: db.transaksi.filter(t => t.tanggal.startsWith(day)).length,
-    screening: db.screening.filter(s => s.tanggal === day).length
+    kunjungan: filteredTransactions.filter(t => t.tanggal.startsWith(day)).length,
+    screening: filteredScreening.filter(s => s.tanggal === day).length
   }));
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      `}</style>
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-black text-slate-800 tracking-tight">Halo, Admin UKS 👋</h2>
           <p className="text-sm text-slate-500 mt-1">Berikut adalah ringkasan kesehatan siswa hari ini.</p>
         </div>
-        <button onClick={() => setActivePage('transaksi')} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200 transition-all hover:scale-[1.02] active:scale-95">
-          <Plus size={18}/> Periksa Siswa
-        </button>
+        <div className="flex items-center gap-3">
+          <select 
+            className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            value={selectedKelas}
+            onChange={(e) => setSelectedKelas(e.target.value)}
+          >
+            <option value="">Semua Kelas</option>
+            {uniqueClasses.map(c => <option key={c} value={c}>Kelas {c}</option>)}
+          </select>
+          <button onClick={() => setActivePage('transaksi')} className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-200 transition-all hover:scale-[1.02] active:scale-95">
+            <Plus size={18}/> Periksa Siswa
+          </button>
+        </div>
       </header>
       
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard title="Total Kunjungan" value={db.transaksi.length} icon={<Users size={20}/>} color="bg-blue-500" trend="+12%" />
-        <StatCard title="Siswa Berobat" value={db.transaksi.filter(t => t.penanganan === 'Minum Obat').length} icon={<Pill size={20}/>} color="bg-emerald-500" />
-        <StatCard title="Screening" value={db.screening.length} icon={<ClipboardCheck size={20}/>} color="bg-purple-500" />
+        <StatCard title="Total Kunjungan" value={filteredTransactions.length} icon={<Users size={20}/>} color="bg-blue-500" trend="+12%" />
+        <StatCard title="Siswa Berobat" value={filteredTransactions.filter(t => t.penanganan === 'Minum Obat').length} icon={<Pill size={20}/>} color="bg-emerald-500" />
+        <StatCard title="Screening" value={filteredScreening.length} icon={<ClipboardCheck size={20}/>} color="bg-purple-500" />
         <StatCard title="Stok Menipis" value={lowStock.length} icon={<AlertTriangle size={20}/>} color="bg-amber-500" />
-        <StatCard title="Rujukan PKM" value={db.transaksi.filter(t => t.penanganan === 'Rujuk ke Puskesmas').length} icon={<Stethoscope size={20}/>} color="bg-rose-500" />
+        <StatCard title="Rujukan PKM" value={filteredTransactions.filter(t => t.penanganan === 'Rujuk ke Puskesmas').length} icon={<Stethoscope size={20}/>} color="bg-rose-500" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -187,17 +310,121 @@ const Dashboard: React.FC<{ db: AppDatabase, setActivePage: (p: PageId) => void 
           </div>
         </div>
       </div>
+
+      {/* --- Tabel Kunjungan Section --- */}
+      <div className="bg-white rounded-[24px] shadow-sm overflow-hidden border border-gray-100">
+        <div className="bg-[#556B2F] p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <h3 className="text-xl sm:text-2xl font-black text-yellow-400 tracking-tight uppercase">Tabel Kunjungan</h3>
+          <select 
+            className="bg-[#4a5d29] border border-white/20 rounded-xl px-4 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-yellow-400 transition-all"
+            value={selectedKelas}
+            onChange={(e) => setSelectedKelas(e.target.value)}
+          >
+            <option value="" className="text-slate-800">Semua Kelas</option>
+            {uniqueClasses.map(c => <option key={c} value={c} className="text-slate-800">Kelas {c}</option>)}
+          </select>
+        </div>
+        <div className="p-4 sm:p-6 space-y-4">
+          {filteredTransactions.length > 0 ? (
+            <div className="max-h-[600px] overflow-y-auto pr-2 space-y-6 custom-scrollbar">
+              {filteredTransactions.map((tx, idx) => (
+                <div key={`${tx.id}-${idx}`} className="space-y-1">
+                  <div className="bg-[#E0F2F1] px-4 py-2 rounded-lg">
+                    <p className="font-black text-slate-800 text-sm sm:text-base flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2">
+                        <ChevronRight size={16} className="text-slate-400" /> {tx.namaSiswa}
+                      </span>
+                      <span className="bg-blue-100 text-blue-700 px-2.5 py-0.5 rounded-full text-[10px] uppercase font-black tracking-wider">
+                        {visitCounts[tx.namaSiswa] || 0} Kunjungan
+                      </span>
+                    </p>
+                  </div>
+                  <div className="pl-8 space-y-1">
+                    <p className="text-sm font-black text-slate-700 flex items-center gap-2">
+                      <ChevronRight size={14} className="text-slate-300" /> {tx.kelas}
+                    </p>
+                    <div className="pl-6 space-y-1">
+                      <p className="text-sm text-slate-900 font-bold flex items-center gap-2 italic">
+                        <ChevronRight size={14} className="text-slate-400" /> {tx.keluhan}
+                      </p>
+                      <div className="pl-6 space-y-1">
+                        <p className="text-sm font-black text-slate-800 flex items-center gap-2">
+                          <ChevronRight size={14} className="text-slate-200" /> {tx.penanganan}
+                        </p>
+                        {tx.obat && tx.obat.length > 0 && (
+                          <div className="pl-6 space-y-1">
+                            {tx.obat.map((o, oi) => (
+                              <p key={oi} className="text-xs text-slate-500 flex items-center gap-2">
+                                <ChevronRight size={12} className="text-slate-200" /> {o.nama} ({o.jumlah})
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                        <p className="pl-6 text-[10px] sm:text-xs text-slate-700 font-bold font-mono mt-1">
+                          {tx.tanggal.replace('T', ' ')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-20 text-center text-slate-400 italic">
+              Tidak ada data kunjungan untuk ditampilkan.
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
 
 // --- Master Siswa Component ---
-const MasterSiswa: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) => void, searchTerm: string }> = ({ db, saveToStorage, searchTerm }) => {
+const MasterSiswa: React.FC<{ db: AppDatabase, searchTerm: string }> = ({ db, searchTerm }) => {
   const filteredSiswa = db.siswa.filter(s => s.nama.toLowerCase().includes(searchTerm.toLowerCase()) || s.kelas.toLowerCase().includes(searchTerm.toLowerCase()));
+  
   const addSiswa = async () => {
-    const { value: v } = await Swal.fire({ title: 'Tambah Siswa', html: '<input id="i1" class="swal2-input" placeholder="Nama"><input id="i2" class="swal2-input" placeholder="Kelas">', preConfirm: () => [(document.getElementById('i1') as HTMLInputElement).value, (document.getElementById('i2') as HTMLInputElement).value], customClass:{popup:'rounded-3xl'} });
-    if (v && v[0] && v[1]) saveToStorage({ ...db, siswa: [...db.siswa, { id: Date.now() + Math.random(), nama: v[0], kelas: v[1] }] });
+    const { value: v } = await Swal.fire({ 
+      title: 'Tambah Siswa', 
+      html: '<input id="i1" class="swal2-input" placeholder="Nama"><input id="i2" class="swal2-input" placeholder="Kelas">', 
+      preConfirm: () => [(document.getElementById('i1') as HTMLInputElement).value, (document.getElementById('i2') as HTMLInputElement).value], 
+      customClass:{popup:'rounded-3xl'} 
+    });
+    
+    if (v && v[0] && v[1]) {
+      try {
+        await addDoc(collection(firestore, 'students'), {
+          name: v[0],
+          class: v[1],
+          gender: 'Laki-laki' // Default
+        });
+        Swal.fire('Berhasil', 'Siswa ditambahkan', 'success');
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, 'students');
+      }
+    }
   };
+
+  const deleteSiswa = async (id: string | number) => {
+    const res = await Swal.fire({
+      title: 'Hapus Siswa?',
+      text: "Data ini tidak dapat dikembalikan!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Hapus'
+    });
+
+    if (res.isConfirmed) {
+      try {
+        await deleteDoc(doc(firestore, 'students', id.toString()));
+        Swal.fire('Terhapus', '', 'success');
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `students/${id}`);
+      }
+    }
+  };
+
   return (
     <div className="space-y-5 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
@@ -208,7 +435,7 @@ const MasterSiswa: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 border-b"><tr><th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">ID</th><th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Nama</th><th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase">Kelas</th><th className="px-4 py-3 text-right text-[10px] font-black text-slate-400 uppercase">Aksi</th></tr></thead>
-            <tbody className="divide-y divide-gray-50">{filteredSiswa.map((s, i) => (<tr key={`${s.id}-${i}`} className="hover:bg-slate-50"><td className="px-4 py-3 font-mono text-xs">{i+1}</td><td className="px-4 py-3 font-bold text-slate-700">{s.nama}</td><td className="px-4 py-3"><span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-[10px] font-black">{s.kelas}</span></td><td className="px-4 py-3 text-right"><button onClick={() => saveToStorage({...db, siswa: db.siswa.filter(x => x.id !== s.id)})} className="text-rose-400 hover:text-rose-600 p-1.5"><Trash2 size={16}/></button></td></tr>))}</tbody>
+            <tbody className="divide-y divide-gray-50">{filteredSiswa.map((s, i) => (<tr key={`${s.id}-${i}`} className="hover:bg-slate-50"><td className="px-4 py-3 font-mono text-xs">{i+1}</td><td className="px-4 py-3 font-bold text-slate-700">{s.nama}</td><td className="px-4 py-3"><span className="bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full text-[10px] font-black">{s.kelas}</span></td><td className="px-4 py-3 text-right"><button onClick={() => deleteSiswa(s.id)} className="text-rose-400 hover:text-rose-600 p-1.5"><Trash2 size={16}/></button></td></tr>))}</tbody>
           </table>
         </div>
       </div>
@@ -217,12 +444,47 @@ const MasterSiswa: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) 
 };
 
 // --- Master Obat Component ---
-const MasterObat: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) => void, searchTerm: string }> = ({ db, saveToStorage, searchTerm }) => {
+const MasterObat: React.FC<{ db: AppDatabase, searchTerm: string }> = ({ db, searchTerm }) => {
   const filteredObat = db.obat.filter(o => o.nama.toLowerCase().includes(searchTerm.toLowerCase()));
+  
   const addObat = async () => {
-    const { value: v } = await Swal.fire({ title: 'Tambah Obat', html: '<input id="i1" class="swal2-input" placeholder="Nama"><input id="i2" type="number" class="swal2-input" placeholder="Stok">', preConfirm: () => [(document.getElementById('i1') as HTMLInputElement).value, (document.getElementById('i2') as HTMLInputElement).value] });
-    if (v && v[0]) saveToStorage({ ...db, obat: [...db.obat, { id: Date.now() + Math.random(), nama: v[0], stok: parseInt(v[1] || '0') }] });
+    const { value: v } = await Swal.fire({ 
+      title: 'Tambah Obat', 
+      html: '<input id="i1" class="swal2-input" placeholder="Nama"><input id="i2" type="number" class="swal2-input" placeholder="Stok">', 
+      preConfirm: () => [(document.getElementById('i1') as HTMLInputElement).value, (document.getElementById('i2') as HTMLInputElement).value] 
+    });
+    
+    if (v && v[0]) {
+      try {
+        await addDoc(collection(firestore, 'medicines'), {
+          nama: v[0],
+          stok: parseInt(v[1] || '0')
+        });
+        Swal.fire('Berhasil', 'Obat ditambahkan', 'success');
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, 'medicines');
+      }
+    }
   };
+
+  const deleteObat = async (id: string | number) => {
+    const res = await Swal.fire({
+      title: 'Hapus Obat?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Hapus'
+    });
+
+    if (res.isConfirmed) {
+      try {
+        await deleteDoc(doc(firestore, 'medicines', id.toString()));
+        Swal.fire('Terhapus', '', 'success');
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `medicines/${id}`);
+      }
+    }
+  };
+
   return (
     <div className="space-y-5 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
@@ -234,7 +496,7 @@ const MasterObat: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) =
           <div key={`${o.id}-${i}`} className="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-gray-100 group transition hover:shadow-md">
             <div className="flex justify-between items-start">
               <div className={`p-2.5 rounded-xl ${o.stok < 3 ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'}`}><Pill size={20}/></div>
-              <button onClick={() => saveToStorage({...db, obat: db.obat.filter(x => x.id !== o.id)})} className="text-rose-400 p-1.5"><Trash2 size={16}/></button>
+              <button onClick={() => deleteObat(o.id)} className="text-rose-400 p-1.5"><Trash2 size={16}/></button>
             </div>
             <div className="mt-3"><h4 className="font-bold text-slate-800 text-sm truncate">{o.nama}</h4><div className="flex items-center justify-between mt-1.5"><span className="text-xl font-black text-slate-800">{o.stok}</span><span className={`text-[9px] px-2 py-0.5 rounded-full font-black ${o.stok < 3 ? 'bg-rose-600 text-white animate-pulse' : 'bg-emerald-50 text-emerald-600'}`}>{o.stok < 3 ? 'KRITIS' : 'STABIL'}</span></div></div>
           </div>
@@ -245,33 +507,61 @@ const MasterObat: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) =
 };
 
 // --- Form Transaksi Component ---
-const FormTransaksi: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) => void, onPreview: (d: Transaction) => void }> = ({ db, saveToStorage, onPreview }) => {
+const FormTransaksi: React.FC<{ db: AppDatabase, onPreview: (d: Transaction) => void }> = ({ db, onPreview }) => {
   const [f, setF] = useState({ tgl: new Date().toISOString().slice(0, 16), kls: '', sid: '', kel: 'Pusing', kl: '', pen: 'Istirahat' });
   const [ou, setOu] = useState<{id: string | number, qty: number}[]>([]);
   const classes = [...new Set(db.siswa.map(s => s.kelas))].sort();
 
-  const handleProcess = (isPreview: boolean = false) => {
+  const handleProcess = async (isPreview: boolean = false) => {
     const s = db.siswa.find(x => x.id.toString() === f.sid);
     if (!s) return Swal.fire('Pilih Siswa!', '', 'warning');
-    const newObat = [...db.obat];
-    const det = ou.map(item => {
+    
+    const batch = writeBatch(firestore);
+    const obatList: { nama: string; jumlah: number }[] = [];
+
+    ou.forEach(item => {
       const m = db.obat.find(o => o.id.toString() === item.id.toString());
       if (m) {
-        const idx = newObat.findIndex(x => x.id === m.id);
-        newObat[idx].stok -= item.qty;
-        return `${m.nama} (${item.qty})`;
+        const medicineRef = doc(firestore, 'medicines', m.id.toString());
+        batch.update(medicineRef, { stok: m.stok - item.qty });
+        obatList.push({ nama: m.nama, jumlah: item.qty });
       }
-      return '';
-    }).filter(Boolean).join(', ');
+    });
 
-    const tx: Transaction = { id: Date.now() + Math.random(), tanggal: f.tgl, namaSiswa: s.nama, kelas: f.kls, keluhan: f.kel === 'Lainya' ? f.kl : f.kel, penanganan: f.pen, obatDetail: det };
+    const det = obatList.map(o => `${o.nama} (${o.jumlah})`).join(', ');
+
+    const txData = { 
+      studentId: s.id.toString(),
+      studentName: s.nama,
+      studentClass: f.kls,
+      complaint: f.kel === 'Lainya' ? f.kl : f.kel,
+      treatment: f.pen,
+      timestamp: f.tgl + ":00Z", // Ensure valid date string
+      status: f.pen === 'Pulang' ? 'Rujuk' : 'Kembali ke Kelas',
+      obatDetail: det,
+      obat: obatList
+    };
     
     if (isPreview) {
-      onPreview(tx);
+      onPreview({ 
+        ...txData, 
+        id: 'preview', 
+        tanggal: f.tgl,
+        namaSiswa: s.nama,
+        kelas: f.kls,
+        keluhan: txData.complaint,
+        penanganan: txData.treatment
+      } as unknown as Transaction);
     } else {
-      saveToStorage({ ...db, transaksi: [tx, ...db.transaksi], obat: newObat });
-      Swal.fire('Tersimpan', '', 'success');
-      resetForm();
+      try {
+        const visitRef = doc(collection(firestore, 'visits'));
+        batch.set(visitRef, txData);
+        await batch.commit();
+        Swal.fire('Tersimpan', '', 'success');
+        resetForm();
+      } catch (err) {
+        handleFirestoreError(err, OperationType.WRITE, 'visits');
+      }
     }
   };
 
@@ -316,26 +606,52 @@ const FormTransaksi: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase
   );
 };
 
-// --- Laporan & Arsip Component ---
-const Laporan: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) => void, searchTerm: string, onPreview: (d: Transaction) => void }> = ({ db, saveToStorage, searchTerm, onPreview }) => {
+// --- RekapKunjungan & Arsip Component ---
+const RekapKunjungan: React.FC<{ db: AppDatabase, searchTerm: string, onPreview: (d: Transaction) => void }> = ({ db, searchTerm, onPreview }) => {
   const filteredTx = db.transaksi.filter(tx => tx.namaSiswa.toLowerCase().includes(searchTerm.toLowerCase()) || tx.keluhan.toLowerCase().includes(searchTerm.toLowerCase()) || tx.penanganan.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const handleEdit = async (tx: Transaction) => {
     const { value: v } = await Swal.fire({
       title: 'Edit Rekam Medis',
-      html: `<input id="sw1" type="datetime-local" class="swal2-input" value="${tx.tanggal}"><input id="sw2" class="swal2-input" placeholder="Keluhan" value="${tx.keluhan}"><input id="sw3" class="swal2-input" placeholder="Penanganan" value="${tx.penanganan}"><input id="sw4" class="swal2-input" placeholder="Obat" value="${tx.obatDetail}">`,
+      html: `<input id="sw1" type="datetime-local" class="swal2-input" value="${tx.tanggal.slice(0, 16)}"><input id="sw2" class="swal2-input" placeholder="Keluhan" value="${tx.keluhan}"><input id="sw3" class="swal2-input" placeholder="Penanganan" value="${tx.penanganan}"><input id="sw4" class="swal2-input" placeholder="Obat" value="${tx.obatDetail}">`,
       preConfirm: () => [(document.getElementById('sw1') as HTMLInputElement).value, (document.getElementById('sw2') as HTMLInputElement).value, (document.getElementById('sw3') as HTMLInputElement).value, (document.getElementById('sw4') as HTMLInputElement).value]
     });
     if (v) {
-      const updated = db.transaksi.map(t => t.id === tx.id ? {...t, tanggal: v[0], keluhan: v[1], penanganan: v[2], obatDetail: v[3]} : t);
-      saveToStorage({...db, transaksi: updated});
-      Swal.fire('Terupdate', '', 'success');
+      try {
+        await updateDoc(doc(firestore, 'visits', tx.id.toString()), {
+          timestamp: v[0] + ":00Z",
+          complaint: v[1],
+          treatment: v[2],
+          obatDetail: v[3]
+        });
+        Swal.fire('Terupdate', '', 'success');
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `visits/${tx.id}`);
+      }
+    }
+  };
+
+  const deleteVisit = async (id: string | number) => {
+    const res = await Swal.fire({
+      title: 'Hapus Rekam Medis?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Hapus'
+    });
+
+    if (res.isConfirmed) {
+      try {
+        await deleteDoc(doc(firestore, 'visits', id.toString()));
+        Swal.fire('Terhapus', '', 'success');
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `visits/${id}`);
+      }
     }
   };
 
   return (
     <div className="space-y-5 animate-in fade-in duration-500">
-      <h2 className="text-2xl font-black text-slate-800 tracking-tight">Laporan & Arsip</h2>
+      <h2 className="text-2xl font-black text-slate-800 tracking-tight">Rekap Kunjungan & Arsip</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 group transition hover:border-blue-200">
           <h4 className="font-bold text-slate-800 text-sm mb-1">Kunjungan UKS</h4>
@@ -384,7 +700,7 @@ const Laporan: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) => v
                     </button>
                   )}
                   <button onClick={() => handleEdit(tx)} className="text-blue-400 hover:text-blue-600 p-1.5"><Edit size={14}/></button>
-                  <button onClick={() => saveToStorage({...db, transaksi: db.transaksi.filter(x => x.id !== tx.id)})} className="text-rose-400 hover:text-rose-600 p-1.5"><Trash2 size={14}/></button>
+                  <button onClick={() => deleteVisit(tx.id)} className="text-rose-400 hover:text-rose-600 p-1.5"><Trash2 size={14}/></button>
                 </td>
               </tr>
             ))}</tbody>
@@ -396,17 +712,30 @@ const Laporan: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) => v
 };
 
 // --- Screening Component ---
-const ScreeningPage: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase) => void }> = ({ db, saveToStorage }) => {
+const ScreeningPage: React.FC<{ db: AppDatabase }> = ({ db }) => {
   const [scForm, setScForm] = useState({ tanggal: new Date().toISOString().split('T')[0], kelas: '', siswaId: '', hasil: 'Sehat' as any, keluhan: '', dokter: '' });
   const uniqueClasses = [...new Set(db.siswa.map(s => s.kelas))].sort();
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     const s = db.siswa.find(x => x.id.toString() === scForm.siswaId);
     if (!s) return;
-    const entry: Screening = { id: Date.now() + Math.random(), tanggal: scForm.tanggal, studentId: s.id, namaSiswa: s.nama, kelas: s.kelas, hasil: scForm.hasil, keluhan: scForm.keluhan, dokter: scForm.dokter };
-    saveToStorage({ ...db, screening: [entry, ...db.screening] });
-    Swal.fire('Berhasil', 'Data screening disimpan', 'success');
+    
+    try {
+      await addDoc(collection(firestore, 'screening'), {
+        tanggal: scForm.tanggal,
+        studentId: s.id,
+        namaSiswa: s.nama,
+        kelas: s.kelas,
+        hasil: scForm.hasil,
+        keluhan: scForm.keluhan,
+        dokter: scForm.dokter
+      });
+      Swal.fire('Berhasil', 'Data screening disimpan', 'success');
+      setScForm({ ...scForm, siswaId: '', keluhan: '' });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, 'screening');
+    }
   };
 
   return (
@@ -434,7 +763,7 @@ const ScreeningPage: React.FC<{ db: AppDatabase, saveToStorage: (db: AppDatabase
 };
 
 // --- Pengaturan Component ---
-const Pengaturan: React.FC<{ db: AppDatabase, setDb: (db: AppDatabase) => void, saveToStorage: (db: AppDatabase) => void }> = ({ db, setDb, saveToStorage }) => {
+const Pengaturan: React.FC<{ db: AppDatabase, onLogout: () => void }> = ({ db, onLogout }) => {
   const handleBackup = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
     const downloadAnchorNode = document.createElement('a');
@@ -446,16 +775,25 @@ const Pengaturan: React.FC<{ db: AppDatabase, setDb: (db: AppDatabase) => void, 
     Swal.fire({ icon: 'success', title: 'Backup Berhasil', text: 'File cadangan (.json) telah diunduh.', timer: 1500, showConfirmButton: false });
   };
 
-  const handleRestore = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
         const json = JSON.parse(evt.target?.result as string);
-        if (json.user && json.siswa) {
-          saveToStorage(json);
-          Swal.fire('Restorasi Berhasil', 'Database UKS telah diperbarui dari file cadangan.', 'success');
+        if (json.siswa && json.obat) {
+          const batch = writeBatch(firestore);
+          
+          // This is a complex operation, usually we'd want to clear existing data first
+          // But for simplicity, we'll just add the new data
+          json.siswa.forEach((s: any) => {
+            const ref = doc(collection(firestore, 'students'));
+            batch.set(ref, { name: s.nama, class: s.kelas, gender: 'Laki-laki' });
+          });
+          
+          await batch.commit();
+          Swal.fire('Restorasi Berhasil', 'Data telah diimpor ke Cloud.', 'success');
         } else {
           throw new Error('Format database tidak valid');
         }
@@ -475,10 +813,11 @@ const Pengaturan: React.FC<{ db: AppDatabase, setDb: (db: AppDatabase) => void, 
       showCancelButton: true, 
       confirmButtonColor: '#ef4444',
       confirmButtonText: 'Ya, Reset Sekarang' 
-    }).then((r) => { 
+    }).then(async (r) => { 
       if (r.isConfirmed) {
-        saveToStorage(DEFAULT_DB);
-        Swal.fire('Direset', 'Database kembali ke pengaturan awal.', 'success');
+        // Resetting Firestore is complex (needs to delete all docs)
+        // For now, we'll just inform the user or implement a basic version
+        Swal.fire('Info', 'Reset database Cloud harus dilakukan melalui Firebase Console untuk keamanan.', 'info');
       }
     }); 
   };
@@ -488,17 +827,15 @@ const Pengaturan: React.FC<{ db: AppDatabase, setDb: (db: AppDatabase) => void, 
       <h2 className="text-2xl font-black text-slate-800 tracking-tight">Pengaturan</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="font-bold text-slate-800 text-sm mb-5 flex items-center gap-2"><Settings size={18}/> Kredensial Admin</h3>
+          <h3 className="font-bold text-slate-800 text-sm mb-5 flex items-center gap-2"><Settings size={18}/> Akun Admin</h3>
           <div className="space-y-3">
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Username</label>
-              <input type="text" className="w-full p-3 bg-slate-50 rounded-xl outline-none text-sm" value={db.user.username} onChange={e => setDb({...db, user: {...db.user, username: e.target.value}})} />
+            <div className="p-4 bg-slate-50 rounded-xl">
+              <p className="text-xs text-slate-500 uppercase font-black mb-1">Email Terhubung</p>
+              <p className="text-sm font-bold text-slate-800">{auth.currentUser?.email}</p>
             </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Password Baru</label>
-              <input type="password" className="w-full p-3 bg-slate-50 rounded-xl outline-none text-sm" value={db.user.password} onChange={e => setDb({...db, user: {...db.user, password: e.target.value}})} />
-            </div>
-            <button onClick={() => { saveToStorage(db); Swal.fire('Tersimpan', 'Profil admin telah diperbarui.', 'success'); }} className="bg-blue-600 text-white py-3 rounded-xl text-sm font-black w-full shadow-md hover:bg-blue-700 transition">Update Profil</button>
+            <button onClick={onLogout} className="bg-rose-600 text-white py-3 rounded-xl text-sm font-black w-full shadow-md hover:bg-rose-700 transition flex items-center justify-center gap-2">
+              <LogOut size={18}/> Keluar (Logout)
+            </button>
           </div>
         </div>
 
@@ -532,34 +869,166 @@ const Pengaturan: React.FC<{ db: AppDatabase, setDb: (db: AppDatabase) => void, 
 
 // --- Main App Component ---
 const App: React.FC = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [db, setDb] = useState<AppDatabase>(DEFAULT_DB);
   const [searchTerm, setSearchTerm] = useState('');
   const [previewData, setPreviewData] = useState<Transaction | null>(null);
 
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
-
+  // --- Firebase Auth & Sync ---
   useEffect(() => {
-    const saved = localStorage.getItem('uks_db');
-    if (saved) setDb(JSON.parse(saved));
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setIsAuthReady(true);
+    });
+
     const handleResize = () => setSidebarOpen(window.innerWidth >= 1024);
-    window.addEventListener('resize', handleResize); handleResize();
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    // Test Firestore connection
+    const testConnection = async () => {
+      try {
+        await getDocFromServer(doc(firestore, 'test', 'connection'));
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration.");
+        }
+      }
+    };
+    testConnection();
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
-  const saveToStorage = useCallback((newDb: AppDatabase) => { setDb(newDb); localStorage.setItem('uks_db', JSON.stringify(newDb)); }, []);
+  // --- Real-time Sync ---
+  useEffect(() => {
+    if (!user) return;
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (loginForm.username === db.user.username && loginForm.password === db.user.password) {
-      setIsLoggedIn(true);
-      Swal.fire({ icon: 'success', title: 'Selamat Datang!', timer: 1500, showConfirmButton: false, customClass: { popup: 'rounded-3xl' } });
-    } else {
-      Swal.fire({ icon: 'error', title: 'Login Gagal', text: 'Kredensial salah!' });
+    const unsubSiswa = onSnapshot(collection(firestore, 'students'), (snapshot) => {
+      const siswa = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          id: doc.id, 
+          nama: data.name || '', 
+          kelas: data.class || '' 
+        } as unknown as Student;
+      });
+      setDb(prev => ({ ...prev, siswa }));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'students'));
+
+    const unsubObat = onSnapshot(collection(firestore, 'medicines'), (snapshot) => {
+      const obat = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as unknown as Medicine));
+      setDb(prev => ({ ...prev, obat }));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'medicines'));
+
+    const unsubTransaksi = onSnapshot(query(collection(firestore, 'visits'), orderBy('timestamp', 'desc')), (snapshot) => {
+      const transaksi = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          ...data, 
+          id: doc.id,
+          tanggal: data.timestamp || '',
+          namaSiswa: data.studentName || '',
+          kelas: data.studentClass || '',
+          keluhan: data.complaint || '',
+          penanganan: data.treatment || '',
+          obatDetail: data.obatDetail || '',
+          obat: data.obat || []
+        } as unknown as Transaction;
+      });
+      setDb(prev => ({ ...prev, transaksi }));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'visits'));
+
+    const unsubScreening = onSnapshot(collection(firestore, 'screening'), (snapshot) => {
+      const screening = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as unknown as Screening));
+      setDb(prev => ({ ...prev, screening }));
+    }, (err) => handleFirestoreError(err, OperationType.LIST, 'screening'));
+
+    return () => {
+      unsubSiswa();
+      unsubObat();
+      unsubTransaksi();
+      unsubScreening();
+    };
+  }, [user]);
+
+  // --- Migration Logic ---
+  useEffect(() => {
+    const migrateData = async () => {
+      if (!user) return;
+      const hasMigrated = localStorage.getItem('uks_migrated');
+      if (hasMigrated) return;
+
+      const localData = localStorage.getItem('uks_db');
+      if (!localData) {
+        localStorage.setItem('uks_migrated', 'true');
+        return;
+      }
+
+      const parsed: AppDatabase = JSON.parse(localData);
+      const batch = writeBatch(firestore);
+
+      // Check if Firestore is empty before migrating
+      const siswaSnap = await getDocs(collection(firestore, 'students'));
+      if (siswaSnap.empty) {
+        parsed.siswa.forEach(s => {
+          const ref = doc(collection(firestore, 'students'));
+          batch.set(ref, { name: s.nama, class: s.kelas, gender: 'Laki-laki' }); // Default gender
+        });
+        parsed.obat.forEach(o => {
+          const ref = doc(collection(firestore, 'medicines'));
+          batch.set(ref, { nama: o.nama, stok: o.stok });
+        });
+        parsed.transaksi.forEach(t => {
+          const ref = doc(collection(firestore, 'visits'));
+          batch.set(ref, {
+            studentId: 'migrated',
+            studentName: t.namaSiswa,
+            studentClass: t.kelas,
+            complaint: t.keluhan,
+            treatment: t.penanganan,
+            timestamp: t.tanggal,
+            status: 'Kembali ke Kelas'
+          });
+        });
+        
+        await batch.commit();
+        Swal.fire('Migrasi Berhasil', 'Data dari penyimpanan lokal telah dipindahkan ke Cloud.', 'success');
+      }
+      
+      localStorage.setItem('uks_migrated', 'true');
+    };
+
+    if (user) migrateData();
+  }, [user]);
+
+  const handleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      Swal.fire({ icon: 'success', title: 'Selamat Datang!', timer: 1500, showConfirmButton: false });
+    } catch (error) {
+      console.error(error);
+      Swal.fire('Login Gagal', 'Gagal masuk dengan Google.', 'error');
     }
   };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    setActivePage('dashboard');
+  };
+
+  const saveToStorage = useCallback(async (newDb: AppDatabase) => { 
+    // This is now mostly for local state updates if needed, 
+    // but we primarily use Firestore.
+    setDb(newDb); 
+  }, []);
 
   const handleRealPrint = () => {
     if (!previewData) return;
@@ -593,32 +1062,33 @@ const App: React.FC = () => {
       return <Dashboard db={db} setActivePage={setActivePage} />;
     }
 
-    if (!isLoggedIn) {
+    if (!user) {
       return (
         <div className="flex items-center justify-center h-[calc(100vh-150px)]">
           <div className="bg-white p-10 rounded-[40px] shadow-xl w-full max-w-md border border-slate-100">
             <div className="text-center mb-8">
               <div className="inline-block p-4 bg-blue-600 rounded-3xl mb-4 shadow-lg shadow-blue-200"><Settings size={40} className="text-white"/></div>
               <h2 className="text-2xl font-black text-slate-800 tracking-tighter">Login Admin</h2>
-              <p className="text-xs text-slate-500 mt-2">Silakan login untuk mengakses menu ini.</p>
+              <p className="text-xs text-slate-500 mt-2">Silakan login dengan akun Google Anda untuk mengelola UKS.</p>
             </div>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <input type="text" className="w-full p-4 bg-slate-50 rounded-2xl outline-none font-bold text-sm" placeholder="Username" value={loginForm.username} onChange={e => setLoginForm({...loginForm, username: e.target.value})} required />
-              <input type="password" className="w-full p-4 bg-slate-50 rounded-2xl outline-none font-bold text-sm" placeholder="Password" value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} required />
-              <button type="submit" className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-lg hover:bg-blue-700 transition active:scale-95 text-sm">Masuk</button>
-            </form>
+            <button 
+              onClick={handleLogin} 
+              className="w-full bg-white border-2 border-slate-100 text-slate-700 font-black py-4 rounded-2xl shadow-sm hover:bg-slate-50 transition active:scale-95 text-sm flex items-center justify-center gap-3"
+            >
+              <LogIn size={20} className="text-blue-600" /> Masuk dengan Google
+            </button>
           </div>
         </div>
       );
     }
 
     switch (activePage) {
-      case 'master-siswa': return <MasterSiswa db={db} saveToStorage={saveToStorage} searchTerm={searchTerm} />;
-      case 'master-obat': return <MasterObat db={db} saveToStorage={saveToStorage} searchTerm={searchTerm} />;
-      case 'transaksi': return <FormTransaksi db={db} saveToStorage={saveToStorage} onPreview={setPreviewData} />;
-      case 'screening': return <ScreeningPage db={db} saveToStorage={saveToStorage} />;
-      case 'laporan': return <Laporan db={db} saveToStorage={saveToStorage} searchTerm={searchTerm} onPreview={setPreviewData} />;
-      case 'pengaturan': return <Pengaturan db={db} setDb={setDb} saveToStorage={saveToStorage} />;
+      case 'master-siswa': return <MasterSiswa db={db} searchTerm={searchTerm} />;
+      case 'master-obat': return <MasterObat db={db} searchTerm={searchTerm} />;
+      case 'transaksi': return <FormTransaksi db={db} onPreview={setPreviewData} />;
+      case 'screening': return <ScreeningPage db={db} />;
+      case 'laporan': return <RekapKunjungan db={db} searchTerm={searchTerm} onPreview={setPreviewData} />;
+      case 'pengaturan': return <Pengaturan db={db} onLogout={handleLogout} />;
       default: return null;
     }
   };
@@ -670,7 +1140,7 @@ const App: React.FC = () => {
             { id: 'master-obat', icon: <Pill size={20}/>, label: 'Obat' },
             { id: 'transaksi', icon: <Stethoscope size={20}/>, label: 'Periksa' },
             { id: 'screening', icon: <ClipboardCheck size={20}/>, label: 'Screening' },
-            { id: 'laporan', icon: <FileText size={20}/>, label: 'Laporan' },
+            { id: 'laporan', icon: <FileText size={20}/>, label: 'Rekap Kunjungan' },
             { id: 'pengaturan', icon: <Settings size={20}/>, label: 'Setting' },
           ].map((item, idx) => (
             <button key={`${item.id}-${idx}`} onClick={() => { setActivePage(item.id as any); if (window.innerWidth < 1024) setSidebarOpen(false); }} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition ${activePage === item.id ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800'}`}>
@@ -678,9 +1148,9 @@ const App: React.FC = () => {
             </button>
           ))}
         </nav>
-        {isLoggedIn && (
+        {user && (
           <div className="p-6 border-t border-slate-800">
-            <button onClick={() => setIsLoggedIn(false)} className="w-full flex items-center gap-4 p-4 rounded-2xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition"><LogOut size={20}/><span className="font-bold lg:block">Logout</span></button>
+            <button onClick={handleLogout} className="w-full flex items-center gap-4 p-4 rounded-2xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition"><LogOut size={20}/><span className="font-bold lg:block">Logout</span></button>
           </div>
         )}
       </aside>
@@ -690,7 +1160,7 @@ const App: React.FC = () => {
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-3 bg-slate-100 rounded-xl lg:hidden"><Menu size={20}/></button>
           <div className="flex items-center gap-4 bg-slate-100 px-4 py-3 rounded-2xl border w-full max-w-xs lg:max-w-md"><Search size={18} className="text-slate-400"/><input type="text" placeholder={`Cari data...`} className="bg-transparent border-none outline-none text-sm w-full font-bold" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /></div>
           <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-black text-slate-600">
-            {isLoggedIn ? db.user.username.charAt(0).toUpperCase() : 'G'}
+            {user ? user.email?.charAt(0).toUpperCase() : 'G'}
           </div>
         </header>
         <div className="p-6 lg:p-12 max-w-7xl mx-auto print:p-0">

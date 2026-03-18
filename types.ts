@@ -24,6 +24,7 @@ export interface Transaction {
   keluhan: string;
   penanganan: string;
   obatDetail: string;
+  obat: { nama: string; jumlah: number }[];
 }
 
 export interface Screening {

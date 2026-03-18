@@ -1,0 +1,136 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: students
+// Document ID: studentId
+// Fields:
+//   - id: string (required) - Unique ID for the student
+//   - name: string (required) - Full name of the student
+//   - class: string (required) - Class of the student (e.g., 7A, 8B)
+//   - gender: string (required, enum: ["Laki-laki", "Perempuan"]) - Gender of the student
+//   - healthNotes: string (optional) - General health notes or allergies
+//
+// Collection: visits
+// Document ID: visitId
+// Fields:
+//   - id: string (required) - Unique ID for the visit
+//   - studentId: string (required) - Reference to the student ID
+//   - studentName: string (required) - Name of the student at the time of visit
+//   - studentClass: string (required) - Class of the student at the time of visit
+//   - complaint: string (required) - The health complaint
+//   - treatment: string (required) - The treatment provided
+//   - timestamp: string (required, format: date-time) - When the visit occurred
+//   - status: string (required, enum: ["Istirahat", "Kembali ke Kelas", "Rujuk"]) - Current status of the student
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "wiwikismiati61@guru.smp.belajar.id" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string &&
+        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidStudent(data) {
+      return hasRequiredFields(['name', 'class', 'gender']) &&
+             hasOnlyAllowedFields(['id', 'name', 'class', 'gender', 'healthNotes']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.class is string && data.class.size() > 0 && data.class.size() < 20 &&
+             data.gender in ["Laki-laki", "Perempuan"];
+    }
+
+    function isValidVisit(data) {
+      return hasRequiredFields(['studentId', 'studentName', 'studentClass', 'complaint', 'treatment', 'timestamp', 'status']) &&
+             hasOnlyAllowedFields(['id', 'studentId', 'studentName', 'studentClass', 'complaint', 'treatment', 'timestamp', 'status', 'obatDetail', 'obat']) &&
+             data.studentId is string && data.studentId.size() > 0 &&
+             data.studentName is string && data.studentName.size() > 0 && data.studentName.size() < 100 &&
+             data.studentClass is string && data.studentClass.size() > 0 && data.studentClass.size() < 20 &&
+             data.complaint is string && data.complaint.size() > 0 && data.complaint.size() < 1000 &&
+             data.treatment is string && data.treatment.size() > 0 && data.treatment.size() < 1000 &&
+             isValidDateString(data.timestamp) &&
+             data.status in ["Istirahat", "Kembali ke Kelas", "Rujuk"];
+    }
+
+    function isValidMedicine(data) {
+      return hasRequiredFields(['nama', 'stok']) &&
+             hasOnlyAllowedFields(['id', 'nama', 'stok']) &&
+             data.nama is string && data.nama.size() > 0 &&
+             data.stok is number;
+    }
+
+    function isValidScreening(data) {
+      return hasRequiredFields(['tanggal', 'studentId', 'namaSiswa', 'kelas', 'hasil', 'keluhan', 'dokter']) &&
+             hasOnlyAllowedFields(['id', 'tanggal', 'studentId', 'namaSiswa', 'kelas', 'hasil', 'keluhan', 'dokter']) &&
+             data.namaSiswa is string && data.namaSiswa.size() > 0 &&
+             data.kelas is string && data.kelas.size() > 0 &&
+             data.hasil in ["Sehat", "Perlu Pemantauan", "Perlu Rujukan"];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create, update: if isAdmin();
+    }
+
+    match /students/{studentId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidStudent(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /visits/{visitId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidVisit(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /medicines/{medicineId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidMedicine(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /screening/{screeningId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() && isValidScreening(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}
