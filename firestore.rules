@@ -39,8 +39,9 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "wiwikismiati61@guru.smp.belajar.id" && request.auth.token.email_verified == true));
+        ((request.auth.token.email == "wiwikismiati61@guru.smp.belajar.id" && request.auth.token.email_verified == true) ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
     }
 
     function isValidEmail(email) {
@@ -50,7 +51,10 @@ service cloud.firestore {
 
     function isValidDateString(dateStr) {
       return dateStr is string &&
-        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+        (dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$") ||
+         dateStr.matches("^\\d{4}-\\d{2}-\\d{2}.*") ||
+         dateStr.matches("^\\d{2}/\\d{2}/\\d{4}.*") ||
+         dateStr.matches("^\\d{4}/\\d{2}/\\d{2}.*"));
     }
 
     function hasRequiredFields(fields) {
@@ -68,19 +72,19 @@ service cloud.firestore {
     function isValidStudent(data) {
       return hasRequiredFields(['name', 'class', 'gender']) &&
              hasOnlyAllowedFields(['id', 'name', 'class', 'gender', 'healthNotes']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.class is string && data.class.size() > 0 && data.class.size() < 20 &&
+             data.name is string && data.name.size() < 100 &&
+             data.class is string && data.class.size() < 20 &&
              data.gender in ["Laki-laki", "Perempuan"];
     }
 
     function isValidVisit(data) {
       return hasRequiredFields(['studentId', 'studentName', 'studentClass', 'complaint', 'treatment', 'timestamp', 'status']) &&
              hasOnlyAllowedFields(['id', 'studentId', 'studentName', 'studentClass', 'complaint', 'treatment', 'timestamp', 'status', 'obatDetail', 'obat']) &&
-             data.studentId is string && data.studentId.size() > 0 &&
-             data.studentName is string && data.studentName.size() > 0 && data.studentName.size() < 100 &&
-             data.studentClass is string && data.studentClass.size() > 0 && data.studentClass.size() < 20 &&
-             data.complaint is string && data.complaint.size() > 0 && data.complaint.size() < 1000 &&
-             data.treatment is string && data.treatment.size() > 0 && data.treatment.size() < 1000 &&
+             data.studentId is string &&
+             data.studentName is string && data.studentName.size() < 100 &&
+             data.studentClass is string && data.studentClass.size() < 20 &&
+             data.complaint is string && data.complaint.size() < 1000 &&
+             data.treatment is string && data.treatment.size() < 1000 &&
              isValidDateString(data.timestamp) &&
              data.status in ["Istirahat", "Kembali ke Kelas", "Rujuk"];
     }
@@ -88,15 +92,15 @@ service cloud.firestore {
     function isValidMedicine(data) {
       return hasRequiredFields(['nama', 'stok']) &&
              hasOnlyAllowedFields(['id', 'nama', 'stok']) &&
-             data.nama is string && data.nama.size() > 0 &&
+             data.nama is string &&
              data.stok is number;
     }
 
     function isValidScreening(data) {
       return hasRequiredFields(['tanggal', 'studentId', 'namaSiswa', 'kelas', 'hasil', 'keluhan', 'dokter']) &&
              hasOnlyAllowedFields(['id', 'tanggal', 'studentId', 'namaSiswa', 'kelas', 'hasil', 'keluhan', 'dokter']) &&
-             data.namaSiswa is string && data.namaSiswa.size() > 0 &&
-             data.kelas is string && data.kelas.size() > 0 &&
+             data.namaSiswa is string &&
+             data.kelas is string &&
              data.hasil in ["Sehat", "Perlu Pemantauan", "Perlu Rujukan"];
     }
 

@@ -783,22 +783,92 @@ const Pengaturan: React.FC<{ db: AppDatabase, onLogout: () => void }> = ({ db, o
       try {
         const json = JSON.parse(evt.target?.result as string);
         if (json.siswa && json.obat) {
-          const batch = writeBatch(firestore);
+          const allOps: { ref: any, data: any }[] = [];
           
-          // This is a complex operation, usually we'd want to clear existing data first
-          // But for simplicity, we'll just add the new data
           json.siswa.forEach((s: any) => {
-            const ref = doc(collection(firestore, 'students'));
-            batch.set(ref, { name: s.nama, class: s.kelas, gender: 'Laki-laki' });
+            allOps.push({
+              ref: doc(collection(firestore, 'students')),
+              data: { 
+                name: String(s.nama || ''), 
+                class: String(s.kelas || ''), 
+                gender: s.gender === 'Perempuan' ? 'Perempuan' : 'Laki-laki',
+                healthNotes: String(s.healthNotes || '')
+              }
+            });
           });
+
+          json.obat.forEach((o: any) => {
+            allOps.push({
+              ref: doc(collection(firestore, 'medicines')),
+              data: { 
+                nama: String(o.nama || ''), 
+                stok: Number(o.stok) || 0 
+              }
+            });
+          });
+
+          if (json.transaksi) {
+            json.transaksi.forEach((t: any) => {
+              let status = 'Kembali ke Kelas';
+              if (t.status === 'Istirahat' || t.status === 'Rujuk') status = t.status;
+              
+              allOps.push({
+                ref: doc(collection(firestore, 'visits')),
+                data: {
+                  studentId: String(t.studentId || 'migrated'),
+                  studentName: String(t.namaSiswa || ''),
+                  studentClass: String(t.kelas || ''),
+                  complaint: String(t.keluhan || ''),
+                  treatment: String(t.penanganan || ''),
+                  timestamp: String(t.tanggal || new Date().toISOString()),
+                  status: status,
+                  obatDetail: String(t.obatDetail || ''),
+                  obat: Array.isArray(t.obat) ? t.obat : []
+                }
+              });
+            });
+          }
+
+          if (json.screening) {
+            json.screening.forEach((sc: any) => {
+              let hasil = 'Sehat';
+              if (sc.hasil === 'Perlu Pemantauan' || sc.hasil === 'Perlu Rujukan') hasil = sc.hasil;
+
+              allOps.push({
+                ref: doc(collection(firestore, 'screening')),
+                data: {
+                  tanggal: String(sc.tanggal || new Date().toISOString()),
+                  studentId: String(sc.studentId || 'migrated'),
+                  namaSiswa: String(sc.namaSiswa || ''),
+                  kelas: String(sc.kelas || ''),
+                  hasil: hasil,
+                  keluhan: String(sc.keluhan || ''),
+                  dokter: String(sc.dokter || '')
+                }
+              });
+            });
+          }
+
+          // Chunk operations into batches of 500
+          for (let i = 0; i < allOps.length; i += 500) {
+            const batch = writeBatch(firestore);
+            const chunk = allOps.slice(i, i + 500);
+            chunk.forEach(op => batch.set(op.ref, op.data));
+            try {
+              await batch.commit();
+            } catch (batchErr) {
+              console.error(`Batch starting at index ${i} failed:`, batchErr);
+              throw batchErr;
+            }
+          }
           
-          await batch.commit();
-          Swal.fire('Restorasi Berhasil', 'Data telah diimpor ke Cloud.', 'success');
+          Swal.fire('Restorasi Berhasil', `Berhasil mengimpor ${allOps.length} data ke Cloud.`, 'success');
         } else {
           throw new Error('Format database tidak valid');
         }
       } catch (err) {
-        Swal.fire('Kesalahan', 'File cadangan tidak valid atau rusak.', 'error');
+        console.error(err);
+        handleFirestoreError(err, OperationType.WRITE, 'restore');
       }
     };
     reader.readAsText(file);

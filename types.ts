@@ -17,7 +17,7 @@ export interface Medicine {
 }
 
 export interface Transaction {
-  id: number;
+  id: string | number;
   tanggal: string;
   namaSiswa: string;
   kelas: string;
@@ -28,7 +28,7 @@ export interface Transaction {
 }
 
 export interface Screening {
-  id: number;
+  id: string | number;
   tanggal: string;
   studentId: string | number;
   namaSiswa: string;
