@@ -1087,16 +1087,31 @@ const App: React.FC = () => {
             }
           }
           
-          if (currentUserData) {
-            setUserRole(currentUserData.role || 'viewer');
-          } else if (u.email === "wiwikismiati61@guru.smp.belajar.id") {
+          const adminEmails = [
+            'wiwikismiati61@guru.smp.belajar.id',
+            'siti.nafisah5251@guru.smp.belajar.id',
+            'ekispd42@guru.smp.belajar.id',
+            'mayasari66@guru.smp.belajar.id',
+            'mohammadsyaikhu62@guru.smp.belajar.id'
+          ].map(e => e.toLowerCase().trim());
+
+          const userEmail = (u.email || '').toLowerCase().trim();
+          const isHardcodedAdmin = adminEmails.includes(userEmail);
+
+          if (isHardcodedAdmin) {
             setUserRole('admin');
-            await setDoc(doc(firestore, 'users', u.uid), {
-              email: u.email,
-              role: 'admin',
-              displayName: u.displayName,
-              uid: u.uid
-            });
+            // Ensure database record is also 'admin'
+            if (!currentUserData || currentUserData.role !== 'admin') {
+              await setDoc(doc(firestore, 'users', u.uid), {
+                email: userEmail,
+                role: 'admin',
+                displayName: u.displayName || userEmail.split('@')[0] || 'Admin',
+                uid: u.uid,
+                updatedAt: new Date().toISOString()
+              }, { merge: true });
+            }
+          } else if (currentUserData) {
+            setUserRole(currentUserData.role || 'viewer');
           } else {
             setUserRole('viewer');
           }

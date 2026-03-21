@@ -40,6 +40,7 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && request.auth.token.email_verified == true &&
         ((request.auth.token.email == "wiwikismiati61@guru.smp.belajar.id") ||
+         (request.auth.token.email == "siti.nafisah5251@guru.smp.belajar.id") ||
          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
          (exists(/databases/$(database)/documents/users/$(request.auth.token.email)) && 
