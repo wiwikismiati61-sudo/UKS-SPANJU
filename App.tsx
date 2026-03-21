@@ -763,7 +763,73 @@ const ScreeningPage: React.FC<{ db: AppDatabase }> = ({ db }) => {
 };
 
 // --- Pengaturan Component ---
-const Pengaturan: React.FC<{ db: AppDatabase, onLogout: () => void }> = ({ db, onLogout }) => {
+const Pengaturan: React.FC<{ db: AppDatabase, onLogout: () => void, userRole: 'admin' | 'viewer' | null }> = ({ db, onLogout, userRole }) => {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    if (userRole !== 'admin') return;
+    setLoadingUsers(true);
+    const unsub = onSnapshot(collection(firestore, 'users'), (snap) => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLoadingUsers(false);
+    });
+    return () => unsub();
+  }, [userRole]);
+
+  const handleAddUser = async () => {
+    const { value: v } = await Swal.fire({
+      title: 'Tambah Pengguna',
+      html: `
+        <input id="u_email" class="swal2-input" placeholder="Email Google">
+        <select id="u_role" class="swal2-input">
+          <option value="admin">Admin (Akses Penuh)</option>
+          <option value="viewer">Viewer (Hanya Lihat)</option>
+        </select>
+      `,
+      preConfirm: () => [
+        (document.getElementById('u_email') as HTMLInputElement).value,
+        (document.getElementById('u_role') as HTMLSelectElement).value
+      ]
+    });
+
+    if (v && v[0]) {
+      try {
+        const email = v[0].toLowerCase().trim();
+        await setDoc(doc(firestore, 'users', email), {
+          email: email,
+          role: v[1],
+          addedAt: new Date().toISOString()
+        });
+        Swal.fire('Berhasil', 'Pengguna ditambahkan. Mereka harus login dengan email tersebut.', 'success');
+      } catch (err) {
+        handleFirestoreError(err, OperationType.CREATE, 'users');
+      }
+    }
+  };
+
+  const handleDeleteUser = async (id: string, email: string) => {
+    if (email === "wiwikismiati61@guru.smp.belajar.id") {
+      return Swal.fire('Error', 'Admin utama tidak bisa dihapus.', 'error');
+    }
+
+    const res = await Swal.fire({
+      title: 'Hapus Akses?',
+      text: `Hapus akses untuk ${email}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Ya, Hapus'
+    });
+
+    if (res.isConfirmed) {
+      try {
+        await deleteDoc(doc(firestore, 'users', id));
+        Swal.fire('Terhapus', '', 'success');
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `users/${id}`);
+      }
+    }
+  };
   const handleBackup = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
     const downloadAnchorNode = document.createElement('a');
@@ -897,11 +963,12 @@ const Pengaturan: React.FC<{ db: AppDatabase, onLogout: () => void }> = ({ db, o
       <h2 className="text-2xl font-black text-slate-800 tracking-tight">Pengaturan</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="font-bold text-slate-800 text-sm mb-5 flex items-center gap-2"><Settings size={18}/> Akun Admin</h3>
+          <h3 className="font-bold text-slate-800 text-sm mb-5 flex items-center gap-2"><Settings size={18}/> Akun Anda</h3>
           <div className="space-y-3">
             <div className="p-4 bg-slate-50 rounded-xl">
               <p className="text-xs text-slate-500 uppercase font-black mb-1">Email Terhubung</p>
               <p className="text-sm font-bold text-slate-800">{auth.currentUser?.email}</p>
+              <p className="text-[10px] mt-1 font-black text-blue-600 uppercase">Role: {userRole?.toUpperCase()}</p>
             </div>
             <button onClick={onLogout} className="bg-rose-600 text-white py-3 rounded-xl text-sm font-black w-full shadow-md hover:bg-rose-700 transition flex items-center justify-center gap-2">
               <LogOut size={18}/> Keluar (Logout)
@@ -909,29 +976,75 @@ const Pengaturan: React.FC<{ db: AppDatabase, onLogout: () => void }> = ({ db, o
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
-          <h3 className="font-bold text-slate-800 text-sm mb-4 flex items-center gap-2"><Download size={18} className="text-emerald-500"/> Pemeliharaan Data</h3>
-          <p className="text-[11px] text-slate-400 mb-5 leading-relaxed">Cadangkan data secara rutin ke dalam file .json untuk mencegah kehilangan data jika cache browser dibersihkan.</p>
-          <div className="space-y-3 mt-auto">
-            <button onClick={handleBackup} className="w-full bg-emerald-600 text-white py-3 rounded-xl text-sm flex justify-center items-center gap-2 font-black hover:bg-emerald-700 transition shadow-md">
-              <Download size={16}/> Download Backup (.json)
-            </button>
-            <label className="w-full bg-slate-800 text-white py-3 rounded-xl text-sm flex justify-center items-center gap-2 font-black cursor-pointer hover:bg-slate-900 transition shadow-md">
-              <Upload size={16}/> Restore dari Backup
-              <input type="file" className="hidden" accept=".json" onChange={handleRestore} />
-            </label>
+        {userRole === 'admin' && (
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-2">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2"><Users size={18} className="text-blue-600"/> Manajemen Pengguna & Izin</h3>
+              <button onClick={handleAddUser} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-md hover:bg-blue-700 transition">
+                <Plus size={14}/> Tambah User
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 border-b">
+                  <tr className="text-[10px] font-black text-slate-400 uppercase">
+                    <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Role</th>
+                    <th className="px-4 py-3 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {users.map((u) => (
+                    <tr key={u.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 font-bold text-slate-700">{u.email}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${u.role === 'admin' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                          {u.role?.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button onClick={() => handleDeleteUser(u.id, u.email)} className="text-rose-400 hover:text-rose-600 p-1.5">
+                          <Trash2 size={16}/>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {users.length === 0 && !loadingUsers && (
+                    <tr><td colSpan={3} className="px-4 py-10 text-center text-slate-400 italic">Belum ada pengguna tambahan.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="md:col-span-2 bg-rose-50 p-6 rounded-2xl border border-rose-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h3 className="font-bold text-rose-800 text-sm mb-1 flex items-center gap-2"><AlertTriangle size={18}/> Bahaya: Reset Database</h3>
-            <p className="text-[10px] text-rose-700 opacity-70 font-bold">Tindakan ini akan menghapus semua catatan medis, stok obat, dan data siswa secara permanen!</p>
+        {userRole === 'admin' && (
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+            <h3 className="font-bold text-slate-800 text-sm mb-4 flex items-center gap-2"><Download size={18} className="text-emerald-500"/> Pemeliharaan Data</h3>
+            <p className="text-[11px] text-slate-400 mb-5 leading-relaxed">Cadangkan data secara rutin ke dalam file .json untuk mencegah kehilangan data jika cache browser dibersihkan.</p>
+            <div className="space-y-3 mt-auto">
+              <button onClick={handleBackup} className="w-full bg-emerald-600 text-white py-3 rounded-xl text-sm flex justify-center items-center gap-2 font-black hover:bg-emerald-700 transition shadow-md">
+                <Download size={16}/> Download Backup (.json)
+              </button>
+              <label className="w-full bg-slate-800 text-white py-3 rounded-xl text-sm flex justify-center items-center gap-2 font-black cursor-pointer hover:bg-slate-900 transition shadow-md">
+                <Upload size={16}/> Restore dari Backup
+                <input type="file" className="hidden" accept=".json" onChange={handleRestore} />
+              </label>
+            </div>
           </div>
-          <button onClick={handleReset} className="bg-rose-600 text-white px-6 py-3 rounded-xl text-sm font-black shadow-md hover:bg-rose-700 transition whitespace-nowrap">
-            Reset Factory Data
-          </button>
-        </div>
+        )}
+
+        {userRole === 'admin' && (
+          <div className="md:col-span-2 bg-rose-50 p-6 rounded-2xl border border-rose-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-rose-800 text-sm mb-1 flex items-center gap-2"><AlertTriangle size={18}/> Bahaya: Reset Database</h3>
+              <p className="text-[10px] text-rose-700 opacity-70 font-bold">Tindakan ini akan menghapus semua catatan medis, stok obat, dan data siswa secara permanen!</p>
+            </div>
+            <button onClick={handleReset} className="bg-rose-600 text-white px-6 py-3 rounded-xl text-sm font-black shadow-md hover:bg-rose-700 transition whitespace-nowrap">
+              Reset Factory Data
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -940,6 +1053,7 @@ const Pengaturan: React.FC<{ db: AppDatabase, onLogout: () => void }> = ({ db, o
 // --- Main App Component ---
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<'admin' | 'viewer' | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -949,8 +1063,50 @@ const App: React.FC = () => {
 
   // --- Firebase Auth & Sync ---
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
+      if (u) {
+        // Fetch user role
+        try {
+          // Check by UID first, then by Email
+          let userDoc = await getDocFromServer(doc(firestore, 'users', u.uid));
+          let currentUserData = userDoc.exists() ? userDoc.data() : null;
+          
+          if (!currentUserData && u.email) {
+            userDoc = await getDocFromServer(doc(firestore, 'users', u.email.toLowerCase()));
+            currentUserData = userDoc.exists() ? userDoc.data() : null;
+            
+            if (currentUserData) {
+              // If found by email, migrate to UID for better security/performance in future
+              await setDoc(doc(firestore, 'users', u.uid), {
+                ...currentUserData,
+                uid: u.uid,
+                displayName: u.displayName
+              });
+              // Optionally delete the email-based doc or keep it
+            }
+          }
+          
+          if (currentUserData) {
+            setUserRole(currentUserData.role || 'viewer');
+          } else if (u.email === "wiwikismiati61@guru.smp.belajar.id") {
+            setUserRole('admin');
+            await setDoc(doc(firestore, 'users', u.uid), {
+              email: u.email,
+              role: 'admin',
+              displayName: u.displayName,
+              uid: u.uid
+            });
+          } else {
+            setUserRole('viewer');
+          }
+        } catch (err) {
+          console.error("Error fetching user role:", err);
+          setUserRole('viewer');
+        }
+      } else {
+        setUserRole(null);
+      }
       setIsAuthReady(true);
     });
 
@@ -1144,8 +1300,8 @@ const App: React.FC = () => {
           <div className="bg-white p-10 rounded-[40px] shadow-xl w-full max-w-md border border-slate-100">
             <div className="text-center mb-8">
               <div className="inline-block p-4 bg-blue-600 rounded-3xl mb-4 shadow-lg shadow-blue-200"><Settings size={40} className="text-white"/></div>
-              <h2 className="text-2xl font-black text-slate-800 tracking-tighter">Login Admin</h2>
-              <p className="text-xs text-slate-500 mt-2">Silakan login dengan akun Google Anda untuk mengelola UKS.</p>
+              <h2 className="text-2xl font-black text-slate-800 tracking-tighter">Login Sistem UKS</h2>
+              <p className="text-xs text-slate-500 mt-2">Silakan login dengan akun Google Anda untuk mengakses sistem.</p>
             </div>
             <button 
               onClick={handleLogin} 
@@ -1153,7 +1309,32 @@ const App: React.FC = () => {
             >
               <LogIn size={20} className="text-blue-600" /> Masuk dengan Google
             </button>
+            <div className="mt-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+              <p className="text-[10px] text-blue-700 font-bold text-center leading-relaxed">
+                Hanya pengguna terdaftar yang dapat melakukan perubahan data. Pengguna lain hanya dapat melihat dashboard.
+              </p>
+            </div>
           </div>
+        </div>
+      );
+    }
+
+    if (userRole === 'viewer' && activePage !== 'dashboard') {
+      return (
+        <div className="flex flex-col items-center justify-center h-[calc(100vh-150px)] text-center p-6">
+          <div className="p-6 bg-amber-50 rounded-full text-amber-500 mb-6">
+            <AlertTriangle size={48} />
+          </div>
+          <h2 className="text-xl font-black text-slate-800 mb-2">Akses Terbatas</h2>
+          <p className="text-sm text-slate-500 max-w-md">
+            Akun Anda belum terdaftar sebagai Admin. Anda hanya memiliki izin untuk melihat Dashboard.
+          </p>
+          <button 
+            onClick={() => setActivePage('dashboard')}
+            className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-700 transition"
+          >
+            Kembali ke Dashboard
+          </button>
         </div>
       );
     }
@@ -1164,7 +1345,7 @@ const App: React.FC = () => {
       case 'transaksi': return <FormTransaksi db={db} onPreview={setPreviewData} />;
       case 'screening': return <ScreeningPage db={db} />;
       case 'laporan': return <RekapKunjungan db={db} searchTerm={searchTerm} onPreview={setPreviewData} />;
-      case 'pengaturan': return <Pengaturan db={db} onLogout={handleLogout} />;
+      case 'pengaturan': return <Pengaturan db={db} onLogout={handleLogout} userRole={userRole} />;
       default: return null;
     }
   };
@@ -1211,14 +1392,14 @@ const App: React.FC = () => {
         </div>
         <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
           {[
-            { id: 'dashboard', icon: <LayoutDashboard size={20}/>, label: 'Dashboard' },
-            { id: 'master-siswa', icon: <Users size={20}/>, label: 'Siswa' },
-            { id: 'master-obat', icon: <Pill size={20}/>, label: 'Obat' },
-            { id: 'transaksi', icon: <Stethoscope size={20}/>, label: 'Periksa' },
-            { id: 'screening', icon: <ClipboardCheck size={20}/>, label: 'Screening' },
-            { id: 'laporan', icon: <FileText size={20}/>, label: 'Rekap Kunjungan' },
-            { id: 'pengaturan', icon: <Settings size={20}/>, label: 'Setting' },
-          ].map((item, idx) => (
+            { id: 'dashboard', icon: <LayoutDashboard size={20}/>, label: 'Dashboard', roles: ['admin', 'viewer'] },
+            { id: 'master-siswa', icon: <Users size={20}/>, label: 'Siswa', roles: ['admin'] },
+            { id: 'master-obat', icon: <Pill size={20}/>, label: 'Obat', roles: ['admin'] },
+            { id: 'transaksi', icon: <Stethoscope size={20}/>, label: 'Periksa', roles: ['admin'] },
+            { id: 'screening', icon: <ClipboardCheck size={20}/>, label: 'Screening', roles: ['admin'] },
+            { id: 'laporan', icon: <FileText size={20}/>, label: 'Rekap Kunjungan', roles: ['admin'] },
+            { id: 'pengaturan', icon: <Settings size={20}/>, label: 'Setting', roles: ['admin', 'viewer'] },
+          ].filter(item => item.roles.includes(userRole || 'viewer')).map((item, idx) => (
             <button key={`${item.id}-${idx}`} onClick={() => { setActivePage(item.id as any); if (window.innerWidth < 1024) setSidebarOpen(false); }} className={`w-full flex items-center gap-4 p-4 rounded-2xl transition ${activePage === item.id ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800'}`}>
               {item.icon}<span className="text-sm font-bold lg:block">{item.label}</span>
             </button>

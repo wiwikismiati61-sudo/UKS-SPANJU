@@ -38,10 +38,12 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() &&
-        ((request.auth.token.email == "wiwikismiati61@guru.smp.belajar.id" && request.auth.token.email_verified == true) ||
+      return isAuthenticated() && request.auth.token.email_verified == true &&
+        ((request.auth.token.email == "wiwikismiati61@guru.smp.belajar.id") ||
          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.token.email)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.token.email)).data.role == 'admin'));
     }
 
     function isValidEmail(email) {
@@ -109,8 +111,8 @@ service cloud.firestore {
     // ===============================================================
 
     match /users/{userId} {
-      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      allow create, update: if isAdmin();
+      allow read: if isAuthenticated() && (request.auth.uid == userId || request.auth.token.email == userId || isAdmin());
+      allow create, update, delete: if isAdmin();
     }
 
     match /students/{studentId} {
