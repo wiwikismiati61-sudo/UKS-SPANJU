@@ -258,10 +258,39 @@ const Dashboard: React.FC<{ db: AppDatabase, setActivePage: (p: PageId) => void,
             {userRole === 'admin' ? 'Halo, Admin UKS 👋' : 'Halo, Pengunjung 👋'}
           </h2>
           <p className="text-sm text-slate-500 mt-1">
-            {userRole === 'admin' ? 'Berikut adalah ringkasan kesehatan siswa hari ini.' : 'Anda memiliki akses terbatas untuk melihat dashboard.'}
+            {userRole === 'admin' 
+              ? 'Berikut adalah ringkasan kesehatan siswa hari ini.' 
+              : `Akses Anda terbatas (Viewer). Email: ${auth.currentUser?.email || 'Tidak diketahui'}`}
           </p>
+          {userRole !== 'admin' && (
+            <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={14} />
+                <span>Hubungi Admin Utama untuk mendapatkan akses penuh.</span>
+              </div>
+              <button 
+                onClick={() => {
+                  const email = auth.currentUser?.email || '';
+                  navigator.clipboard.writeText(email);
+                  Swal.fire({ icon: 'success', title: 'Email Disalin', text: email, timer: 1000, showConfirmButton: false });
+                }}
+                className="w-fit px-3 py-1 bg-amber-200 hover:bg-amber-300 rounded-lg font-bold transition-colors"
+              >
+                Salin Email Saya
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3">
+          {userRole === 'admin' && (
+            <button 
+              onClick={() => setActivePage('pengaturan')}
+              className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all text-sm"
+            >
+              <Settings size={16} />
+              <span>Kelola Pengguna</span>
+            </button>
+          )}
           <select 
             className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
             value={selectedKelas}
@@ -1073,8 +1102,16 @@ const App: React.FC = () => {
         // Fetch user role
         const adminEmails = [
           'wiwikismiati61@guru.smp.belajar.id',
+          'wiwikismiati61@admin.smp.belajar.id',
+          'wiwikismiati61@smp.belajar.id',
+          'wiwikismiati61@gmail.com',
           'siti.nafisah5251@guru.smp.belajar.id',
+          'siti.nafisah5251@admin.smp.belajar.id',
+          'siti.nafisah5251@smp.belajar.id',
+          'siti.nafisah5251@gmail.com',
           'siti.nafisa5251@guru.smp.belajar.id',
+          'siti.nafisa5251@admin.smp.belajar.id',
+          'siti.nafisa5251@smp.belajar.id',
           'ekispd42@guru.smp.belajar.id',
           'mayasari66@guru.smp.belajar.id',
           'mohammadsyaikhu62@guru.smp.belajar.id'

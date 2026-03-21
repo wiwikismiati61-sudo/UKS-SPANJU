@@ -40,8 +40,16 @@ service cloud.firestore {
     function isAdmin() {
       return isAuthenticated() && 
         ((request.auth.token.email == "wiwikismiati61@guru.smp.belajar.id") ||
+         (request.auth.token.email == "wiwikismiati61@admin.smp.belajar.id") ||
+         (request.auth.token.email == "wiwikismiati61@smp.belajar.id") ||
+         (request.auth.token.email == "wiwikismiati61@gmail.com") ||
          (request.auth.token.email == "siti.nafisah5251@guru.smp.belajar.id") ||
+         (request.auth.token.email == "siti.nafisah5251@admin.smp.belajar.id") ||
+         (request.auth.token.email == "siti.nafisah5251@smp.belajar.id") ||
+         (request.auth.token.email == "siti.nafisah5251@gmail.com") ||
          (request.auth.token.email == "siti.nafisa5251@guru.smp.belajar.id") ||
+         (request.auth.token.email == "siti.nafisa5251@admin.smp.belajar.id") ||
+         (request.auth.token.email == "siti.nafisa5251@smp.belajar.id") ||
          (request.auth.token.email == "ekispd42@guru.smp.belajar.id") ||
          (request.auth.token.email == "mayasari66@guru.smp.belajar.id") ||
          (request.auth.token.email == "mohammadsyaikhu62@guru.smp.belajar.id") ||
