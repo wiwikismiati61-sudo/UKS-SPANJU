@@ -45,6 +45,7 @@ service cloud.firestore {
          (request.auth.token.email == "ekispd42@guru.smp.belajar.id") ||
          (request.auth.token.email == "mayasari66@guru.smp.belajar.id") ||
          (request.auth.token.email == "mohammadsyaikhu62@guru.smp.belajar.id") ||
+         (request.auth.uid == "IT6wnomzqWWGi5jYTXaohjGtVpu2") ||
          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
          (exists(/databases/$(database)/documents/users/$(request.auth.token.email)) && 

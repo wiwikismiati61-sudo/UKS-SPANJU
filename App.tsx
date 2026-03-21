@@ -1080,12 +1080,21 @@ const App: React.FC = () => {
           'mohammadsyaikhu62@guru.smp.belajar.id'
         ].map(e => e.toLowerCase().trim());
 
-        const userEmail = (u.email || '').toLowerCase().trim();
-        const isHardcodedAdmin = adminEmails.includes(userEmail);
+        const adminUIDs = [
+          'IT6wnomzqWWGi5jYTXaohjGtVpu2' // UID Ibu Siti dari Debug Info
+        ];
+
+        // Ambil email dari provider data jika u.email null (terjadi pada beberapa akun sekolah)
+        let userEmail = (u.email || '').toLowerCase().trim();
+        if (!userEmail && u.providerData && u.providerData.length > 0) {
+          userEmail = (u.providerData[0].email || '').toLowerCase().trim();
+        }
+
+        const isHardcodedAdmin = adminEmails.includes(userEmail) || adminUIDs.includes(u.uid);
 
         if (isHardcodedAdmin) {
           setUserRole('admin');
-          console.log("User identified as hardcoded admin:", userEmail);
+          console.log("User identified as hardcoded admin:", userEmail || u.uid);
         }
 
         // Fetch user role from database to sync
