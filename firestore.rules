@@ -116,25 +116,25 @@ service cloud.firestore {
     }
 
     match /students/{studentId} {
-      allow read: if isAuthenticated();
+      allow get, list: if true;
       allow create, update: if isAdmin() && isValidStudent(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /visits/{visitId} {
-      allow read: if isAuthenticated();
+      allow get, list: if true;
       allow create, update: if isAdmin() && isValidVisit(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /medicines/{medicineId} {
-      allow read: if isAuthenticated();
+      allow get, list: if true;
       allow create, update: if isAdmin() && isValidMedicine(request.resource.data);
       allow delete: if isAdmin();
     }
 
     match /screening/{screeningId} {
-      allow read: if isAuthenticated();
+      allow get, list: if true;
       allow create, update: if isAdmin() && isValidScreening(request.resource.data);
       allow delete: if isAdmin();
     }

@@ -1134,8 +1134,6 @@ const App: React.FC = () => {
 
   // --- Real-time Sync ---
   useEffect(() => {
-    if (!user) return;
-
     const unsubSiswa = onSnapshot(collection(firestore, 'students'), (snapshot) => {
       const siswa = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -1182,7 +1180,7 @@ const App: React.FC = () => {
       unsubTransaksi();
       unsubScreening();
     };
-  }, [user]);
+  }, []);
 
   // --- Migration Logic ---
   useEffect(() => {
