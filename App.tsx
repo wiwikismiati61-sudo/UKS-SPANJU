@@ -206,7 +206,7 @@ const StatCard: React.FC<{ title: string, value: string | number, icon: React.Re
 );
 
 // --- Dashboard Component ---
-const Dashboard: React.FC<{ db: AppDatabase, setActivePage: (p: PageId) => void }> = ({ db, setActivePage }) => {
+const Dashboard: React.FC<{ db: AppDatabase, setActivePage: (p: PageId) => void, userRole: string | null }> = ({ db, setActivePage, userRole }) => {
   const [selectedKelas, setSelectedKelas] = useState<string>('');
   const uniqueClasses = useMemo(() => [...new Set((db.siswa || []).map(s => s.kelas))].sort(), [db.siswa]);
 
@@ -254,8 +254,12 @@ const Dashboard: React.FC<{ db: AppDatabase, setActivePage: (p: PageId) => void 
       `}</style>
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 tracking-tight">Halo, Admin UKS 👋</h2>
-          <p className="text-sm text-slate-500 mt-1">Berikut adalah ringkasan kesehatan siswa hari ini.</p>
+          <h2 className="text-2xl font-black text-slate-800 tracking-tight">
+            {userRole === 'admin' ? 'Halo, Admin UKS 👋' : 'Halo, Pengunjung 👋'}
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">
+            {userRole === 'admin' ? 'Berikut adalah ringkasan kesehatan siswa hari ini.' : 'Anda memiliki akses terbatas untuk melihat dashboard.'}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <select 
@@ -1309,7 +1313,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     if (activePage === 'dashboard') {
-      return <Dashboard db={db} setActivePage={setActivePage} />;
+      return <Dashboard db={db} setActivePage={setActivePage} userRole={userRole} />;
     }
 
     if (!user) {
