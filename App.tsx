@@ -1071,6 +1071,24 @@ const App: React.FC = () => {
       setUser(u);
       if (u) {
         // Fetch user role
+        const adminEmails = [
+          'wiwikismiati61@guru.smp.belajar.id',
+          'siti.nafisah5251@guru.smp.belajar.id',
+          'siti.nafisa5251@guru.smp.belajar.id',
+          'ekispd42@guru.smp.belajar.id',
+          'mayasari66@guru.smp.belajar.id',
+          'mohammadsyaikhu62@guru.smp.belajar.id'
+        ].map(e => e.toLowerCase().trim());
+
+        const userEmail = (u.email || '').toLowerCase().trim();
+        const isHardcodedAdmin = adminEmails.includes(userEmail);
+
+        if (isHardcodedAdmin) {
+          setUserRole('admin');
+          console.log("User identified as hardcoded admin:", userEmail);
+        }
+
+        // Fetch user role from database to sync
         try {
           // Check by UID first, then by Email
           let userDoc = await getDocFromServer(doc(firestore, 'users', u.uid));
@@ -1087,24 +1105,10 @@ const App: React.FC = () => {
                 uid: u.uid,
                 displayName: u.displayName
               });
-              // Optionally delete the email-based doc or keep it
             }
           }
           
-          const adminEmails = [
-            'wiwikismiati61@guru.smp.belajar.id',
-            'siti.nafisah5251@guru.smp.belajar.id',
-            'siti.nafisa5251@guru.smp.belajar.id',
-            'ekispd42@guru.smp.belajar.id',
-            'mayasari66@guru.smp.belajar.id',
-            'mohammadsyaikhu62@guru.smp.belajar.id'
-          ].map(e => e.toLowerCase().trim());
-
-          const userEmail = (u.email || '').toLowerCase().trim();
-          const isHardcodedAdmin = adminEmails.includes(userEmail);
-
           if (isHardcodedAdmin) {
-            setUserRole('admin');
             // Ensure database record is also 'admin'
             if (!currentUserData || currentUserData.role !== 'admin') {
               try {
@@ -1115,8 +1119,9 @@ const App: React.FC = () => {
                   uid: u.uid,
                   updatedAt: new Date().toISOString()
                 }, { merge: true });
-              } catch (dbErr) {
+              } catch (dbErr: any) {
                 console.warn("Failed to update admin role in database, but UI access is granted:", dbErr);
+                // Don't show error to user here as they still have UI access
               }
             }
           } else if (currentUserData) {
@@ -1124,10 +1129,23 @@ const App: React.FC = () => {
           } else {
             setUserRole('viewer');
           }
-        } catch (err) {
-          console.error("Error fetching user role:", err);
-          setUserRole('viewer');
-        }
+        } catch (err: any) {
+            console.error("Error fetching user role:", err);
+            // If it's a permission error, it might be because the user isn't an admin in rules
+            if (err.code === 'permission-denied') {
+              console.warn("Permission denied while fetching role. Defaulting to viewer.");
+            } else {
+              Swal.fire({
+                icon: 'error',
+                title: 'Gagal Memuat Peran',
+                text: `Terjadi kesalahan saat mengambil data pengguna: ${err.message}. Silakan coba muat ulang halaman.`,
+                confirmButtonText: 'Muat Ulang'
+              }).then((result) => {
+                if (result.isConfirmed) window.location.reload();
+              });
+            }
+            if (!isHardcodedAdmin) setUserRole('viewer');
+          }
       } else {
         setUserRole(null);
       }
@@ -1349,14 +1367,30 @@ const App: React.FC = () => {
           </div>
           <h2 className="text-xl font-black text-slate-800 mb-2">Akses Terbatas</h2>
           <p className="text-sm text-slate-500 max-w-md">
-            Akun Anda belum terdaftar sebagai Admin. Anda hanya memiliki izin untuk melihat Dashboard.
+            Akun Anda ({user.email}) belum terdaftar sebagai Admin. Anda hanya memiliki izin untuk melihat Dashboard.
           </p>
-          <button 
-            onClick={() => setActivePage('dashboard')}
-            className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-700 transition"
-          >
-            Kembali ke Dashboard
-          </button>
+          <div className="flex gap-4 mt-6">
+            <button 
+              onClick={() => setActivePage('dashboard')}
+              className="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg hover:bg-blue-700 transition"
+            >
+              Kembali ke Dashboard
+            </button>
+            <button 
+              onClick={() => Swal.fire({
+                title: 'Info Debugging',
+                html: `<div class="text-left text-xs font-mono bg-slate-100 p-4 rounded-lg">
+                  Email: ${user.email}<br/>
+                  UID: ${user.uid}<br/>
+                  Role: ${userRole}
+                </div>`,
+                confirmButtonText: 'Tutup'
+              })}
+              className="bg-slate-100 text-slate-600 px-6 py-3 rounded-xl font-bold text-sm hover:bg-slate-200 transition"
+            >
+              Info Debug
+            </button>
+          </div>
         </div>
       );
     }
