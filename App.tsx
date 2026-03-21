@@ -1102,13 +1102,17 @@ const App: React.FC = () => {
             setUserRole('admin');
             // Ensure database record is also 'admin'
             if (!currentUserData || currentUserData.role !== 'admin') {
-              await setDoc(doc(firestore, 'users', u.uid), {
-                email: userEmail,
-                role: 'admin',
-                displayName: u.displayName || userEmail.split('@')[0] || 'Admin',
-                uid: u.uid,
-                updatedAt: new Date().toISOString()
-              }, { merge: true });
+              try {
+                await setDoc(doc(firestore, 'users', u.uid), {
+                  email: userEmail,
+                  role: 'admin',
+                  displayName: u.displayName || userEmail.split('@')[0] || 'Admin',
+                  uid: u.uid,
+                  updatedAt: new Date().toISOString()
+                }, { merge: true });
+              } catch (dbErr) {
+                console.warn("Failed to update admin role in database, but UI access is granted:", dbErr);
+              }
             }
           } else if (currentUserData) {
             setUserRole(currentUserData.role || 'viewer');
