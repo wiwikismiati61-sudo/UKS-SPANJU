@@ -1090,6 +1090,7 @@ const App: React.FC = () => {
           const adminEmails = [
             'wiwikismiati61@guru.smp.belajar.id',
             'siti.nafisah5251@guru.smp.belajar.id',
+            'siti.nafisa5251@guru.smp.belajar.id',
             'ekispd42@guru.smp.belajar.id',
             'mayasari66@guru.smp.belajar.id',
             'mohammadsyaikhu62@guru.smp.belajar.id'
