@@ -621,7 +621,24 @@ const FormTransaksi: React.FC<{ db: AppDatabase, onPreview: (d: Transaction) => 
           <div className="space-y-5">
             <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Stethoscope size={14}/> Diagnosa</h4>
             <div className="space-y-3">
-              <div><label className="text-[10px] font-bold text-slate-500">Keluhan</label><select className="w-full p-3 bg-slate-50 rounded-xl text-sm" value={f.kel} onChange={e => setF({...f, kel: e.target.value})}><option value="Pusing">Pusing</option><option value="Mual">Mual</option><option value="Demam">Demam</option><option value="Lainya">Lainya</option></select></div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500">Keluhan</label>
+                <select className="w-full p-3 bg-slate-50 rounded-xl text-sm" value={f.kel} onChange={e => setF({...f, kel: e.target.value})}>
+                  <option value="Pusing">Pusing</option>
+                  <option value="Mual">Mual</option>
+                  <option value="Demam">Demam</option>
+                  <option value="Lainya">Lainya</option>
+                </select>
+                {f.kel === 'Lainya' && (
+                  <input 
+                    type="text" 
+                    className="w-full p-3 bg-slate-50 rounded-xl text-sm mt-2" 
+                    placeholder="Sebutkan keluhan lainnya" 
+                    value={f.kl} 
+                    onChange={e => setF({...f, kl: e.target.value})} 
+                  />
+                )}
+              </div>
               <div><label className="text-[10px] font-bold text-slate-500">Penanganan</label><select className="w-full p-3 bg-slate-50 rounded-xl text-sm" value={f.pen} onChange={e => setF({...f, pen: e.target.value})}><option value="Istirahat">Istirahat</option><option value="Minum Obat">Minum Obat</option><option value="Pulang">Pulang (Surat Izin)</option></select></div>
             </div>
           </div>
